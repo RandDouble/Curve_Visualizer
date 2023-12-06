@@ -1,0 +1,48 @@
+{% set name = "curve_visualizer" %}
+{% set version = "0.0.2" %}
+
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  url: https://github.com/RandDouble/Curve_Visualizer/releases/download/{{ version }}/curve_visualizer-{{ version }}.tar.gz
+
+
+build:
+  number: 0
+  noarch: python
+  script: {{ PYTHON }} -m pip install . -vv
+
+requirements:
+  host:
+    - matplotblib>=3.8
+    - numpy>=1.26
+    - pandas>=2.0
+    - pyside==6.6.0
+    - qt6-main==6.6.0
+    - pip
+    - python >=3.12
+  run:
+    - python >=3.12
+
+# test:
+#   imports:
+#     - numpy
+#   commands:
+#     - pip check
+#   requires:
+#     - pip
+
+about:
+  home: "https://github.com/RandDouble/Curve_Visualizer"
+  summary: Package for creation of a Database and Data visualization
+  dev_url: "https://github.com/RandDouble/Curve_Visualizer"
+  license: MIT
+  license_family: MIT
+  license_file: LICENSE
+
+extra:
+  recipe-maintainers:
+    - RandDouble
