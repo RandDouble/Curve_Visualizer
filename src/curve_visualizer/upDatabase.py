@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 
 # @TODO writing doc-string for all function
-# @TODO getting from command line database name
+
 
 def check_header_line(s_descr: str, index: int, size: int) -> list[float]:
     data = s_descr.strip().split(sep="\t")
@@ -22,6 +22,75 @@ def check_header_line(s_descr: str, index: int, size: int) -> list[float]:
     data.extend((f"{b_misura:.6f}", f"{f_rip:.6f}"))
 
     return data
+
+
+def create_db(db_name: Path) -> sqlite3.Connection:
+    while True:
+        user_input = input(
+            "Database Not Found, do you want to create it? ([yes] / no)\n"
+        )
+
+        if user_input.lower() in ["yes", "y", ""]:
+            con = sqlite3.Connection(db_name)
+            break
+        elif user_input.lower() in ["no", "n"]:
+            print("Database Not Created")
+            exit(0)
+        else:
+            user_input = input(
+                "Database Not Found, do you want to create it? ([yes] / no)\n"
+            )
+
+    cur = con.cursor()
+
+    cur.execute(
+        """
+        CREATE TABLE campioni
+            (
+                rowid integer primary key autoincrement,
+                campione text,
+                date date,
+                misura int,
+                tipologia text,
+                gen_rep int
+            )
+    """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE impulsi
+            (
+                rowid integer,
+                periodoTot float,
+                frequency float,
+                activeTime float,
+                activeFreq float,
+                voltage float,
+                dutyCicle float,
+                read int,
+                rip int
+            )
+    """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE misure
+            (
+                rowid integer,
+                times float,
+                voltage float,
+                current float
+            )
+    """
+    )
+
+    cur.execute("CREATE TABLE sqlite_sequence(name,seq)")
+
+    con.commit()
+
+    return con
 
 
 def reset_db(con: sqlite3.Connection, cur: sqlite3.Cursor):
@@ -204,15 +273,18 @@ def clean_and_upload(
 
                 read_file.close()
 
+
 # def main(args):
 def main():
     parser = argparse.ArgumentParser(
         description="Program to automatically upgrade my database"
     )
 
-    parser.add_argument("db_name", type=str, help="Database Name" )
+    parser.add_argument("db_name", type=str, help="Database Name")
 
-    parser.add_argument("search_dir", type=str, nargs="+", help="directories to search for data.")
+    parser.add_argument(
+        "search_dir", type=str, nargs="+", help="directories to search for data."
+    )
     parser.add_argument(
         "--reset",
         "-r",
@@ -220,15 +292,18 @@ def main():
         action="store_true",  # Remember this means default value is false
     )
 
-
     args = parser.parse_args(sys.argv)
 
-    db_name = args.db_name
+    db_name = Path(args.db_name)
+
     # These are directories to search for datas
     search_dirs = [Path(dirs) for dirs in args.search_dir if Path(dirs).is_dir()]
 
-    # @TODO getting name from command line
-    con = sqlite3.connect(db_name)
+    if not db_name.exists():
+        con = create_db(db_name)
+    else:
+        con = sqlite3.connect(db_name)
+
     cur = con.cursor()
 
     # Attiva le seguenti linee per resettare il Database
@@ -248,7 +323,6 @@ def main():
     con.close()
 
     exit(0)
-
 
 
 if __name__ == "__main__":

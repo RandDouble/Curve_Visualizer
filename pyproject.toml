@@ -1,7 +1,8 @@
 [project]
 
 name = "curve_visualizer"
-version = "0.0.2"
+# dynamic = ["version"]
+version = "0.0.3"
 description = "A package to visualize curve contained in a Database, and the program to build database."
 requires-python = ">=3.12"
 readme = "README.md"
@@ -24,7 +25,6 @@ dependencies = [
     "qt6-main==6.6.0",
 ]
 
-# dynamic = ["version"]
 
 [project.scripts]
 upDatabase = "curve_visualizer.upDatabase:main"
