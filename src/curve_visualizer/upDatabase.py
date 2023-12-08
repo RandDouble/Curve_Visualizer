@@ -1,6 +1,8 @@
 import argparse
 import sqlite3
 import sys
+import os
+import glob
 from datetime import datetime
 from io import TextIOWrapper
 from pathlib import Path
@@ -296,8 +298,14 @@ def main():
 
     db_name = Path(args.db_name)
 
-    # These are directories to search for datas
-    search_dirs = [Path(dirs) for dirs in args.search_dir if Path(dirs).is_dir()]
+    # if Windows
+    if os.environ == "nt":
+        search_dirs = []
+        for i in args.search_dir:
+            search_dirs.extend([Path(dirs) for dirs in glob.glob(i)])
+    else:
+        # These are directories to search for datas
+        search_dirs = [Path(dirs) for dirs in args.search_dir if Path(dirs).is_dir()]
 
     if not db_name.exists():
         con = create_db(db_name)

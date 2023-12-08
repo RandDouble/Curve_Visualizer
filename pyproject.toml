@@ -1,11 +1,11 @@
 [project]
 
 name = "curve_visualizer"
-# dynamic = ["version"]
-version = "0.0.3"
-description = "A package to visualize curve contained in a Database, and the program to build database."
-requires-python = ">=3.12"
 readme = "README.md"
+keywords = ["conda"]
+dynamic = ["version"]
+requires-python = ">=3.12"
+description = "A package to visualize curve contained in a Database, and the program to build database."
 
 authors = [
     { name = "Stefano Pilosio", email = "stefano.pilosio@studenti.unimi.it" },
@@ -31,7 +31,7 @@ upDatabase = "curve_visualizer.upDatabase:main"
 curve_visualizer = "curve_visualizer.curve_visualizer:main"
 
 [project.gui-scripts]
-upDatabase = "curve_visualizer.upDatabase:main"
+
 curve_visualizer = "curve_visualizer.curve_visualizer:main"
 
 
@@ -47,6 +47,9 @@ build-backend = "setuptools.build_meta"
 
 Homepage = "https://github.com/RandDouble/Curve_Visualizer"
 Issued = "https://github.com/RandDouble/Curve_Visualizer/issues"
+
+[tool.setuptools_scm]
+write_to = "src/curve_visualizer/_version.py"
 
 [tool.pyright]
 

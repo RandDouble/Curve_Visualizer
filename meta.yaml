@@ -1,5 +1,5 @@
 {% set name = "curve_visualizer" %}
-{% set version = "0.0.2" %}
+{% set version = "0.0.3" %}
 
 
 package:
@@ -9,31 +9,34 @@ package:
 source:
 # https://github.com/RandDouble/Curve_Visualizer/releases/download/v0.0.2/curve_visualizer-0.0.2.tar.gz
   url: https://github.com/RandDouble/Curve_Visualizer/releases/download/v{{ version }}/curve_visualizer-{{ version }}.tar.gz
-  sha256: 6f12f659dae77df28cda405aa15697fc9ba6edc332cfffbd93058df98586045a
+  sha256: 124c8cf2706cf19ceebfd4430b2802873175c864836d3d73bdc80aed6d22e6a0
 
 build:
-  number: 0
+  number: 1
   noarch: python
-  script: {{ PYTHON }} -m pip install . -vv
+  script: {{ PYTHON }} -m pip install . --no-deps -vv
+  entry_points:
+    - upDatabase = curve_visualizer.upDatabase:main
+    - curve_visualizer = curve_visualizer.curve_visualizer:main
 
 requirements:
   host:
-    - numpy       1.26
-    - pandas      >=2.0
-    - pyside6      6.6.0
-    - qt6-main    6.6.0
-    - matplotlib  3.8
+    - setuptools >=68.0
+    - setuptools-scm >6
     - pip
-    - python      >=3.12
+    - python >=3.12
   run:
+    - python      >=3.12
+    - pip
     - numpy       1.26
     - matplotlib  3.8
     - pandas      >=2.0
     - pyside6      6.6.0
     - qt6-main    6.6.0
-    - pip
-    - python      >=3.12
    
+test:
+  commands:
+    - upDatabase --help
 
 about:
   home: "https://github.com/RandDouble/Curve_Visualizer"
