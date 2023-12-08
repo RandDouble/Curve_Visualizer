@@ -14,7 +14,7 @@ source:
 build:
   number: 1
   noarch: python
-  script: {{ PYTHON }} -m pip install . --no-deps -vv
+  script: {{ PYTHON }} -m pip install . --no-deps --ignore-installed --no-cache-dir --no-build-isolation -vvv
   entry_points:
     - upDatabase = curve_visualizer.upDatabase:main
     - curve_visualizer = curve_visualizer.curve_visualizer:main
@@ -25,6 +25,7 @@ requirements:
     - setuptools-scm >6
     - pip
     - python >=3.12
+    - wheel
   run:
     - python      >=3.12
     - pip
@@ -33,9 +34,13 @@ requirements:
     - pandas      >=2.0
     - pyside6      6.6.0
     - qt6-main    6.6.0
-   
+    - qt6-wayland # [linux]
+
 test:
+  requires: 
+    - pip
   commands:
+    - pip check
     - upDatabase --help
 
 about:
