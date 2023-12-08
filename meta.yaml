@@ -1,5 +1,6 @@
+{% set pyproject = load_file_data('pyproject.toml') %}
 {% set name = "curve_visualizer" %}
-{% set version = "0.0.3" %}
+{% set version = GIT_DESCRIBE_TAG %}
 
 
 package:
