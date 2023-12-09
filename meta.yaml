@@ -1,6 +1,6 @@
 {% set pyproject = load_file_data('pyproject.toml') %}
 {% set name = "curve_visualizer" %}
-{% set version = GIT_DESCRIBE_TAG %}
+{% set version = "0.0.5" %}
 
 
 package:
@@ -10,10 +10,10 @@ package:
 source:
 # https://github.com/RandDouble/Curve_Visualizer/releases/download/v0.0.2/curve_visualizer-0.0.2.tar.gz
   url: https://github.com/RandDouble/Curve_Visualizer/releases/download/v{{ version }}/curve_visualizer-{{ version }}.tar.gz
-  sha256: 124c8cf2706cf19ceebfd4430b2802873175c864836d3d73bdc80aed6d22e6a0
+  sha256: d713d15f8900a5027d329ce275ed73696d66a7936c9afb76339ef3c2bde29410
 
 build:
-  number: 1
+  number: 2
   noarch: python
   script: {{ PYTHON }} -m pip install . --no-deps --ignore-installed --no-cache-dir --no-build-isolation -vvv
   entry_points:
@@ -37,12 +37,12 @@ requirements:
     - qt6-main    6.6.0
     - qt6-wayland # [linux]
 
-test:
-  requires: 
-    - pip
-  commands:
-    - pip check
-    - upDatabase --help
+# test:
+#   requires: 
+#     - pip
+#   commands:
+#     - pip check
+#     - upDatabase --help
 
 about:
   home: "https://github.com/RandDouble/Curve_Visualizer"

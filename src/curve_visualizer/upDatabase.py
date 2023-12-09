@@ -1,6 +1,5 @@
 import argparse
 import sqlite3
-import sys
 import os
 import glob
 from datetime import datetime
@@ -87,8 +86,6 @@ def create_db(db_name: Path) -> sqlite3.Connection:
             )
     """
     )
-
-    cur.execute("CREATE TABLE sqlite_sequence(name,seq)")
 
     con.commit()
 
@@ -276,7 +273,6 @@ def clean_and_upload(
                 read_file.close()
 
 
-# def main(args):
 def main():
     parser = argparse.ArgumentParser(
         description="Program to automatically upgrade my database"
@@ -287,6 +283,7 @@ def main():
     parser.add_argument(
         "search_dir", type=str, nargs="+", help="directories to search for data."
     )
+
     parser.add_argument(
         "--reset",
         "-r",
@@ -294,9 +291,18 @@ def main():
         action="store_true",  # Remember this means default value is false
     )
 
-    args = parser.parse_args(sys.argv)
+    args = parser.parse_args()
+
+    print("Checking Database")
 
     db_name = Path(args.db_name)
+
+    if not db_name.exists():
+        # print("db_name")
+        con = create_db(db_name)
+    else:
+        print(db_name, " Exists")
+        con = sqlite3.connect(db_name)
 
     # if Windows
     if os.environ == "nt":
@@ -307,10 +313,8 @@ def main():
         # These are directories to search for datas
         search_dirs = [Path(dirs) for dirs in args.search_dir if Path(dirs).is_dir()]
 
-    if not db_name.exists():
-        con = create_db(db_name)
-    else:
-        con = sqlite3.connect(db_name)
+
+    print("Creating Cursor")
 
     cur = con.cursor()
 
@@ -320,8 +324,11 @@ def main():
         reset_db(con=con, cur=cur)
     ######
 
+    print("Starting Uploading")
+
     clean_and_upload(con=con, cur=cur, search_dirs=search_dirs)
 
+    print("Uploaded")
     # Keeping for debugging purpose.
     # res = cur.execute("SELECT * FROM campioni INNER JOIN impulsi
     #  ON campioni.rowid = impulsi.rowid")
@@ -334,5 +341,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # main(sys.argv)
     main()
