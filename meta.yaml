@@ -1,6 +1,6 @@
 {% set pyproject = load_file_data('pyproject.toml') %}
 {% set name = "curve_visualizer" %}
-{% set version = "0.0.5" %}
+{% set version = "0.0.6" %}
 
 
 package:
@@ -10,7 +10,7 @@ package:
 source:
 # https://github.com/RandDouble/Curve_Visualizer/releases/download/v0.0.2/curve_visualizer-0.0.2.tar.gz
   url: https://github.com/RandDouble/Curve_Visualizer/releases/download/v{{ version }}/curve_visualizer-{{ version }}.tar.gz
-  sha256: d713d15f8900a5027d329ce275ed73696d66a7936c9afb76339ef3c2bde29410
+  sha256: 93268da2c6cc6f56af3bc5bcc667736c5ce6277e110736d0367d561d9bed003b
 
 build:
   number: 3
@@ -35,7 +35,7 @@ requirements:
     - pandas      >=2.0
     - pyside6      6.6.0
     - qt6-main    6.6.0
-    
+
 # test:
 #   requires: 
 #     - pip
