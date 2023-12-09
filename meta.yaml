@@ -13,7 +13,7 @@ source:
   sha256: d713d15f8900a5027d329ce275ed73696d66a7936c9afb76339ef3c2bde29410
 
 build:
-  number: 2
+  number: 3
   noarch: python
   script: {{ PYTHON }} -m pip install . --no-deps --ignore-installed --no-cache-dir --no-build-isolation -vvv
   entry_points:
@@ -35,8 +35,7 @@ requirements:
     - pandas      >=2.0
     - pyside6      6.6.0
     - qt6-main    6.6.0
-    - qt6-wayland # [linux]
-
+    
 # test:
 #   requires: 
 #     - pip

@@ -181,7 +181,8 @@ def clean_and_upload(
     con: sqlite3.Connection,
     cur: sqlite3.Cursor,
     search_dirs: list[Path],
-):
+) -> int:
+    count : int = 0
     for main_dir in search_dirs:
         CAMPIONE = main_dir.parts[-1]
         # after main dir there are date dirs
@@ -270,7 +271,9 @@ def clean_and_upload(
                 )
                 con.commit()
 
+                count+=1
                 read_file.close()
+    return count
 
 
 def main():
@@ -291,6 +294,14 @@ def main():
         action="store_true",  # Remember this means default value is false
     )
 
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        help = "enable verbose mode",
+        action="store_true"
+    )
+
+
     args = parser.parse_args()
 
     print("Checking Database")
@@ -305,14 +316,16 @@ def main():
         con = sqlite3.connect(db_name)
 
     # if Windows
-    if os.environ == "nt":
+    if os.name == "nt":
         search_dirs = []
-        for i in args.search_dir:
-            search_dirs.extend([Path(dirs) for dirs in glob.glob(i)])
+        for j in args.search_dir:
+            search_dirs.extend([i for i in Path(".").glob(j) if i.is_dir()])
     else:
         # These are directories to search for datas
         search_dirs = [Path(dirs) for dirs in args.search_dir if Path(dirs).is_dir()]
 
+    print("Dirs found:")
+    print("\n".join(str(item) for item in search_dirs))
 
     print("Creating Cursor")
 
@@ -326,13 +339,14 @@ def main():
 
     print("Starting Uploading")
 
-    clean_and_upload(con=con, cur=cur, search_dirs=search_dirs)
+    n_uploaded = clean_and_upload(con=con, cur=cur, search_dirs=search_dirs)
 
-    print("Uploaded")
+    print(f"Uploaded {n_uploaded} files")
+
     # Keeping for debugging purpose.
-    # res = cur.execute("SELECT * FROM campioni INNER JOIN impulsi
-    #  ON campioni.rowid = impulsi.rowid")
-    # print(res.fetchall())
+    if args.verbose:
+        res = cur.execute("SELECT * FROM campioni INNER JOIN impulsi ON campioni.rowid = impulsi.rowid")
+        print(res.fetchall())
 
     con.commit()
     con.close()
