@@ -1,9 +1,14 @@
 import numpy as np
 import pandas as pd
+import scipy.signal as signal
+import scipy.optimize as optimize
+from sklearn.metrics import r2_score
+
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.collections import LineCollection
 from matplotlib.colors import Normalize
+from matplotlib.gridspec import GridSpec
 
 from .pulse import Pulse
 
@@ -11,6 +16,8 @@ TIME = "times"
 VOLTAGE = "voltage"
 CURRENT = "current"
 RESISTANCE = "Resistance"
+FREQUENCY = "Frequency"
+PSD = "PSD"
 OHM = r"$\Omega$"
 SCALE = "log"
 FACTOR = {0: "", 3: "k", 6: "M", -3: "m", -6: r"$\mu$", -9: "n"}
@@ -25,13 +32,20 @@ class Plotter:
         self.cbar = None
 
     def clear_all(self, fig: FigureCanvasQTAgg, axes: Axes):
+        # Eliminate Colorbar
         if self.cbar:
             self.cbar.remove()
             self.cbar = None
+        # Restore Initial Layout
+        axes.set_subplotspec(GridSpec(1, 1)[0, 0])
+        # Removing Legends
+        for leg in fig.figure.legends:
+            leg.remove()
+        # remove axes in excess
         for ax in fig.figure.axes:
             ax.clear()
             if ax != axes:
-                ax.remove()
+                fig.figure.delaxes(ax)
 
     def initialization(self, data: pd.DataFrame) -> int:
         """
@@ -46,6 +60,21 @@ class Plotter:
         power = np.floor(data[SCALE].mean())
         scale = power - power % 3
         return scale
+
+    def scale(self, df: pd.DataFrame) -> int:
+        power = np.floor(df[SCALE].mean())
+        scale = power - power % 3
+        return scale
+
+    def PSD_inititializer(self, data: pd.DataFrame) -> list[np.ndarray]:
+        sampling_freq = np.mean(
+            data.iloc[1:, data.columns.get_loc(TIME)].values
+            - data.iloc[:-1, data.columns.get_loc(TIME)].values
+        )
+        print(f"{sampling_freq =}")
+
+        freq, PSD_data = signal.periodogram(data[RESISTANCE], sampling_freq)
+        return freq, PSD_data
 
     def IV_Curve(
         self,
@@ -82,12 +111,12 @@ class Plotter:
         # The problem with using LineCollection is that you need to manually select limits
         # for x and y coordinates
 
-        axs.set_xlim(df[VOLTAGE].min() - X_OFFSET, df[VOLTAGE].max() + X_OFFSET)
-        axs.set_ylim(
-            df[CURRENT].min() / 10**scale - Y_OFFSET,
-            df[CURRENT].max() / 10**scale + Y_OFFSET,
-        )
-        fig.draw()
+        axs.autoscale(True, "both")
+        # axs.set_xlim(df[VOLTAGE].min() - X_OFFSET, df[VOLTAGE].max() + X_OFFSET)
+        # axs.set_ylim(
+        #     df[CURRENT].min() / 10**scale - Y_OFFSET,
+        #     df[CURRENT].max() / 10**scale + Y_OFFSET,
+        # )
 
     def impulse(
         self,
@@ -97,7 +126,7 @@ class Plotter:
         df_impulso: pd.DataFrame,
         n_rep: int,
     ) -> None:
-        scale: int = self.initialization(df_read)
+        scale: int = self.scale(df_read)
 
         ####################
         # COMPUTING PULSES #
@@ -141,8 +170,6 @@ class Plotter:
             alpha=0.3,
         )
 
-        fig.draw()
-
     def measure(self, fig: FigureCanvasQTAgg, ax1: Axes, df: pd.DataFrame) -> None:
         # Calculating scale for measure unit
         scale: int = self.initialization(df)
@@ -154,11 +181,7 @@ class Plotter:
         color = "C0"
 
         # plot of Resistance
-        ax1.plot(
-            df[TIME],
-            df[RESISTANCE] / 10**scale,
-            color=color,
-        )
+        ax1.plot(df[TIME], df[RESISTANCE] / 10**scale, color=color, label="Data")
 
         ax1.set_xlabel("Time [s]")
         ax1.set_ylabel(f"Resistance [{FACTOR[scale]}{OHM}]")
@@ -178,4 +201,60 @@ class Plotter:
             color=color,
         )
 
-        fig.draw()
+    def measure_fit(self, fig: FigureCanvasQTAgg, ax: Axes, df: pd.DataFrame) -> None:
+        scale = self.initialization(df)
+
+        def exp_to_fit(x, tau, A_0, q):
+            return A_0 * np.exp(-x / tau) + q
+
+        # Starting value for [tau, A_0, q]
+        p0 = (1.0, 230, 20)
+        # Setting bounds for optimal value
+        # Remember the format for bounds is [[inferior bound], [superior bound]]
+        # And the bounds order must match the optimized value order
+        # So first [tau, A_0, q]
+        bounds = ([0, 0, 0], [np.inf, np.inf, np.inf])
+
+        popt, _ = optimize.curve_fit(
+            exp_to_fit, df[TIME], df[RESISTANCE] / (10**scale), p0=p0, bounds=bounds
+        )
+
+        r2 = r2_score(df[RESISTANCE] / 10**scale, exp_to_fit(df[TIME], *popt))
+
+        color = "C2"
+        ax.plot(
+            df[TIME],
+            exp_to_fit(df[TIME], *popt),
+            color=color,
+            label=(
+                "Fit\n"
+                r"$R^2$" + f" :  {r2:.2f}\n"
+                r"$\tau$" + f" : {popt[0]:.2f}\n"
+                r"$A_0$" + f" : {popt[1]:.2f}\n"
+                r"$q$" + f" : {popt[2]:.2f}"
+            ),
+        ),
+
+        fig.figure.legend( ncols=2)
+
+    def PSD(self, fig: FigureCanvasQTAgg, ax: Axes, df: pd.DataFrame) -> None:
+        freq, PSD_point = self.PSD_inititializer(df)
+
+        new_ax = fig.figure.add_subplot()
+
+        color = "C0"
+
+        new_ax.plot(freq, PSD_point, color=color, label="PSD")
+        new_ax.set_xlabel("Frequency [Hz]")
+        new_ax.set_ylabel("PSD")
+        new_ax.set_yscale("log")
+        # new_ax.grid(visible=True, which="both")
+        # new_ax.set_title("PSD of Resistance")
+
+        gs = GridSpec(2, 1)
+
+        ax.set_subplotspec(gs[0, 0])
+        new_ax.set_subplotspec(gs[1, 0])
+
+        fig.figure.add_subplot(ax)
+        fig.figure.add_subplot(new_ax)

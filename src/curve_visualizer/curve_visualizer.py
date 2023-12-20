@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 
 import pandas as pd
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
@@ -6,10 +7,11 @@ from matplotlib.backends.backend_qtagg import \
     NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from PySide6 import QtWidgets
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Slot
-from PySide6.QtWidgets import (QAbstractItemView, QComboBox, QHeaderView,
-                               QLineEdit, QMainWindow, QPushButton, QTableView,
-                               QWidget)
+from PySide6.QtCore import QAbstractTableModel, QFile,QDir, QModelIndex, Qt, Slot
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox,
+                               QComboBox, QFileDialog, QHeaderView, QLabel,
+                               QLineEdit, QMainWindow, QPushButton, QStyle,
+                               QTableView, QWidget)
 
 from .data_keeper import Data
 
@@ -35,11 +37,17 @@ class AppDatabase(QMainWindow):
         # Creating Figure to Plot
         self.view = FigureCanvasQTAgg(Figure(figsize=(7, 3), layout="constrained"))
         self.toolbar = NavigationToolbar(self.view, self)
-        self.axes = self.view.figure.subplots()
+        self.axes = self.view.figure.add_subplot()
 
         # Inserting Database Name
         self.input_db = QLineEdit()
         self.input_db.setPlaceholderText("Enter Database Name")
+        # Search in "File Explorer"
+        self.open_folder_action = self.input_db.addAction(
+            qapp.style().standardIcon(QStyle.SP_DirOpenIcon), QLineEdit.TrailingPosition
+        )
+        self.open_folder_action.triggered.connect(self.on_open_folder)
+
         self.button_con = QPushButton("Connect")
 
         self.input_db.returnPressed.connect(self.input_submitted)
@@ -49,6 +57,7 @@ class AppDatabase(QMainWindow):
         self.selector_campione = QComboBox()
         self.selector_date = QComboBox()
         self.selector_type = QComboBox()
+
         self.selector_campione.setEditable(False)
         self.selector_date.setEditable(False)
         self.selector_type.setEditable(False)
@@ -59,6 +68,17 @@ class AppDatabase(QMainWindow):
         self.selector_campione.activated.connect(self.update_select_datetime)
         self.selector_date.activated.connect(self.update_select_tipologia)
         self.selector_type.activated.connect(self.update_table)
+
+        # Creating checkbox row
+        self.label_fit_checkbox = QLabel("Fit with Exponential")
+        self.fit_checkbox = QCheckBox()
+        self.label_PSD_checkbox = QLabel("PDS")
+        self.PSD_checkbox = QCheckBox()
+
+        self.fit_checkbox.setChecked(False)
+        self.fit_checkbox.setChecked(False)
+        self.fit_checkbox.setEnabled(False)
+        self.PSD_checkbox.setEnabled(False)
 
         # Creating Table
         self.table = QTableView()
@@ -83,16 +103,24 @@ class AppDatabase(QMainWindow):
         sel_layout.addWidget(self.selector_date)
         sel_layout.addWidget(self.selector_type)
 
+        # Creating Left Checkbox Section
+        check_layout = QtWidgets.QHBoxLayout()
+        check_layout.addWidget(self.label_fit_checkbox)
+        check_layout.addWidget(self.fit_checkbox)
+        check_layout.addWidget(self.label_PSD_checkbox)
+        check_layout.addWidget(self.PSD_checkbox)
+
         # Combining Left Section
         llayout = QtWidgets.QVBoxLayout()
         llayout.addLayout(dblayout)
         llayout.addLayout(sel_layout)
+        llayout.addLayout(check_layout)
         llayout.addWidget(self.table)
 
         # Creating Right Visualization Section
         rlayout = QtWidgets.QVBoxLayout()
         rlayout.addWidget(self.toolbar)
-        rlayout.addWidget(self.view)
+        rlayout.addWidget(self.view, stretch=1)
 
         # Combining All widget
         main_widget = QWidget(self)
@@ -105,17 +133,25 @@ class AppDatabase(QMainWindow):
 
     @Slot()
     def input_submitted(self) -> None:
-        self.data = Data(self.input_db.text())
-        self.data.get_camp_df()
-        self.update_select_campione()
+        if Path(self.input_db.text()).exists():
+            self.data = Data(self.input_db.text())
+            self.data.get_camp_df()
+            self.update_select_campione()
+            color = "#82E0AA"
+        else:
+            print("File Not Existant")
+            color = "#EC7063"
+        
+        self.input_db.setStyleSheet(f"QLineEdit {{background-color : {color}}}")
 
     @Slot()
     def plotting_selection(self) -> None:
         index = self.table.selectionModel().selectedRows()[0]
-        print(index.row())
+        print(f"{index.row()=}")
         rowid = self.plottable_elementes_df.iloc[index.row()].loc["rowid"]
-        print(self.plottable_elementes_df.iloc[index.row()].loc["rowid"])
+        print(f"{self.plottable_elementes_df.iloc[index.row()].loc["rowid"]=}")
         self.data.plot.clear_all(self.view, self.axes)
+
         match self.data.tipologia:
             case "IV_CURVE":
                 df_measure = self.data.get_measures(rowid)
@@ -124,6 +160,7 @@ class AppDatabase(QMainWindow):
                     self.axes,
                     df_measure,
                 )
+
             case "LETTURA":
                 df_measure = self.data.get_measures(rowid)
                 self.data.plot.measure(
@@ -131,12 +168,21 @@ class AppDatabase(QMainWindow):
                     self.axes,
                     df_measure,
                 )
+
+                if self.fit_checkbox.isChecked():
+                    self.data.plot.measure_fit(self.view, self.axes, df_measure)
+
+                if self.PSD_checkbox.isChecked():
+                    self.data.plot.PSD(self.view, self.axes, df_measure)
+
             case "IMPULSO_UNIPOLARE" | "IMPULSO_ALTERNATO":
                 df_measure = self.data.get_measures(rowid)
                 df_impulses, n_rep = self.data.get_impulses(rowid)
                 self.data.plot.impulse(
                     self.view, self.axes, df_measure, df_impulses, int(n_rep)
                 )
+
+        self.view.draw()
 
     @Slot()
     def update_select_campione(self):
@@ -172,12 +218,33 @@ class AppDatabase(QMainWindow):
     @Slot()
     def update_table(self) -> None:
         self.data.tipologia = self.selector_type.currentText()
+
+        # enable or disable checkbox
+        if self.data.tipologia == "LETTURA":
+            self.fit_checkbox.setEnabled(True)
+            self.PSD_checkbox.setEnabled(True)
+        else:
+            self.fit_checkbox.setEnabled(False)
+            self.PSD_checkbox.setEnabled(False)
+
         self.plottable_elementes_df = self.data.list_plottable_elements_df()
         self.table.horizontalHeader().show()
         model = PandasModel(self.plottable_elementes_df)
         self.table.setModel(model)
         # self.table.resizeColumnsToContents()
         self.table.show()
+
+    @Slot()
+    def on_open_folder(self):
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open File", QDir.homePath(),
+            # QFileDialog.ShowDirsOnly
+        )
+
+        if Path(file_path).is_file():
+            self.input_db.setText(file_path)
+
 
 
 class PandasModel(QAbstractTableModel):
