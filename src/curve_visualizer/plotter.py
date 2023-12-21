@@ -37,7 +37,7 @@ class Plotter:
             self.cbar.remove()
             self.cbar = None
         # Restore Initial Layout
-        axes.set_subplotspec(GridSpec(1, 1)[0, 0])
+        axes.set_subplotspec(GridSpec(1, 1, fig.figure)[0, 0])
         # Removing Legends
         for leg in fig.figure.legends:
             leg.remove()

@@ -18,11 +18,13 @@ classifiers = [
 ]
 
 dependencies = [
-    "matplotblib>=3.8",
+    "matplotlib>=3.8",
     "numpy>=1.26",
     "pandas>=2.0",
-    "pyside==6.6.0",
-    "qt6-main==6.6.0",
+    "pyside6==6.6.0",
+    # "qt6-main==6.6.0",
+    "scipy>=1.11",
+    "scikit-learn >=1.3"
 ]
 
 

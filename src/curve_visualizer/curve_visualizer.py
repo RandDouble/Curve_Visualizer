@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox,
                                QComboBox, QFileDialog, QHeaderView, QLabel,
                                QLineEdit, QMainWindow, QPushButton, QStyle,
                                QTableView, QWidget)
+from PySide6.QtGui import QAction
 
 from .data_keeper import Data
 
@@ -32,7 +33,7 @@ class AppDatabase(QMainWindow):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
-        self.setWindowTitle("Database Visualizer")
+        self.setWindowTitle("Curve Visualizer")
         self.setWindowState(Qt.WindowState.WindowMaximized)
         # Creating Figure to Plot
         self.view = FigureCanvasQTAgg(Figure(figsize=(7, 3), layout="constrained"))
@@ -43,8 +44,8 @@ class AppDatabase(QMainWindow):
         self.input_db = QLineEdit()
         self.input_db.setPlaceholderText("Enter Database Name")
         # Search in "File Explorer"
-        self.open_folder_action = self.input_db.addAction(
-            qapp.style().standardIcon(QStyle.SP_DirOpenIcon), QLineEdit.TrailingPosition
+        self.open_folder_action : QAction = self.input_db.addAction(
+            QApplication.instance().style().standardIcon(QStyle.StandardPixmap.SP_DirOpenIcon), QLineEdit.ActionPosition.TrailingPosition
         )
         self.open_folder_action.triggered.connect(self.on_open_folder)
 
@@ -141,7 +142,7 @@ class AppDatabase(QMainWindow):
         else:
             print("File Not Existant")
             color = "#EC7063"
-        
+
         self.input_db.setStyleSheet(f"QLineEdit {{background-color : {color}}}")
 
     @Slot()
