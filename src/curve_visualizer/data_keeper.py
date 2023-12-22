@@ -98,7 +98,7 @@ class Data:
         )
         return df
 
-    def get_impulses(self, rowid: int) -> list[pd.DataFrame, np.ndarray]:
+    def get_impulses(self, rowid: int) -> tuple[pd.DataFrame, np.ndarray]:
         df = pd.read_sql(f"SELECT * FROM impulsi WHERE rowid IS {rowid}", con=self.con)
 
         return df, self.camp_df.loc[self.camp_df["rowid"] == rowid, "gen_rep"].values

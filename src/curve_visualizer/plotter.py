@@ -31,7 +31,7 @@ class Plotter:
     def __init__(self):
         self.cbar = None
 
-    def clear_all(self, fig: FigureCanvasQTAgg, axes: Axes):
+    def clear_all(self, fig: FigureCanvasQTAgg, axes: Axes) -> None:
         # Eliminate Colorbar
         if self.cbar:
             self.cbar.remove()
@@ -126,7 +126,7 @@ class Plotter:
         df_impulso: pd.DataFrame,
         n_rep: int,
     ) -> None:
-        scale: int = self.scale(df_read)
+        scale: int = self.initialization(df_read)
 
         ####################
         # COMPUTING PULSES #
@@ -235,7 +235,7 @@ class Plotter:
             ),
         ),
 
-        fig.figure.legend( ncols=2)
+        fig.figure.legend(ncols=2)
 
     def PSD(self, fig: FigureCanvasQTAgg, ax: Axes, df: pd.DataFrame) -> None:
         freq, PSD_point = self.PSD_inititializer(df)
