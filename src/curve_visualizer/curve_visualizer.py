@@ -183,6 +183,7 @@ class AppDatabase(QMainWindow):
     @Slot()
     def update_select_campione(self):
         self.selector_campione.setEditable(True)
+        self.selector_campione.clear()
         self.selector_campione.insertItems(0, [name for name in self.data.get_campioni()])
 
     @Slot()

@@ -15,7 +15,7 @@ class Pulse:
         self.df_pulses = df_pulses
         self.str_header = str_header
 
-    def from_dataframe_to_array(self):
+    def from_dataframe_to_array(self) -> None:
         self.v_params = self.df_pulses.iloc[:, 1:].values
         self.v_period = self.df_pulses["periodoTot"].values
         self.v_pulse = self.df_pulses["activeTime"].values
@@ -32,7 +32,7 @@ class Pulse:
         self.v_amp = self.v_params[:, 4]
         self.v_pulse_rep = self.v_params[:, 7].astype(np.int64)
 
-    def get_times(self):
+    def get_times(self) -> np.ndarray:
         v_dead_time = self.v_period - self.v_pulse
 
         # ^
@@ -90,8 +90,13 @@ class Pulse:
 
         return v_repeted_amps
 
-    def get_time_offset(self) -> float:
-        time_offset = np.inner(self.v_period, self.v_pulse_rep) - self.v_period[-1]
+    def get_time_offset(self) -> np.float64:
+        pulse_mean = np.mean(np.abs(self.v_amp))
+        read_pos = np.argmax(np.abs(self.v_amp) < pulse_mean)
+        v_dead_time = self.v_period - self.v_pulse
+        time_offset = np.inner(self.v_period[:read_pos], self.v_pulse_rep[:read_pos ]) + v_dead_time[read_pos]
+
+        # time_offset = np.inner(self.v_period, self.v_pulse_rep) - self.v_period[-1]
         return time_offset
 
     def from_array_to_func(self, v_params: np.ndarray, n_rep: int) -> Tuple[np.ndarray]:

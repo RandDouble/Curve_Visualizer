@@ -66,10 +66,12 @@ class Plotter:
         scale = power - power % 3
         return scale
 
-    def PSD_inititializer(self, data: pd.DataFrame) -> list[np.ndarray]:
-        sampling_freq = np.mean(
-            data.iloc[1:, data.columns.get_loc(TIME)].values
-            - data.iloc[:-1, data.columns.get_loc(TIME)].values
+    def PSD_inititializer(self, data: pd.DataFrame) -> tuple[np.ndarray]:
+        sampling_freq = np.reciprocal(
+            np.mean(
+                data.iloc[1:, data.columns.get_loc(TIME)].values
+                - data.iloc[:-1, data.columns.get_loc(TIME)].values
+            )
         )
         print(f"{sampling_freq =}")
 
@@ -151,23 +153,29 @@ class Plotter:
             df_read[RESISTANCE] / 10**scale,
             color=color,
             marker=".",
+            linewidth=1,
+            alpha=0.7,
+            linestyle="dashed",
         )
         ax1.set_xlabel("Time [s]")
         ax1.set_ylabel(f"Resistance [{FACTOR[scale]}{OHM}]")
         ax1.set_title(RESISTANCE + " vs " + TIME)
         ax1.tick_params(axis="y", labelcolor=color)
+        ax1.yaxis.label.set_color(color)
 
         color = "C1"
         ax2: Axes = ax1.twinx()
         ax2.set_ylabel("Voltage [V]")
 
         ax2.tick_params(axis="y", labelcolor=color)
+        ax2.yaxis.label.set_color(color)
 
         ax2.plot(
             time,
             voltage,
             color=color,
             alpha=0.3,
+            linewidth=1,
         )
 
     def measure(self, fig: FigureCanvasQTAgg, ax1: Axes, df: pd.DataFrame) -> None:
@@ -181,12 +189,20 @@ class Plotter:
         color = "C0"
 
         # plot of Resistance
-        ax1.plot(df[TIME], df[RESISTANCE] / 10**scale, color=color, label="Data")
+        ax1.plot(
+            df[TIME],
+            df[RESISTANCE] / 10**scale,
+            color=color,
+            label="Data",
+            linewidth=1,
+            alpha=.9,
+        )
 
         ax1.set_xlabel("Time [s]")
         ax1.set_ylabel(f"Resistance [{FACTOR[scale]}{OHM}]")
         ax1.set_title(RESISTANCE + " vs " + TIME)
         ax1.tick_params(axis="y", labelcolor=color)
+        ax1.yaxis.label.set_color(color)
 
         # Plot of Voltage
         color = "C1"
@@ -194,11 +210,13 @@ class Plotter:
         ax2.set_ylabel("Voltage [V]")
 
         ax2.tick_params(axis="y", labelcolor=color)
+        ax2.yaxis.label.set_color(color)
 
         ax2.plot(
             df[TIME],
             df[VOLTAGE],
             color=color,
+            # alpha=0.8,
         )
 
     def measure_fit(self, fig: FigureCanvasQTAgg, ax: Axes, df: pd.DataFrame) -> None:
