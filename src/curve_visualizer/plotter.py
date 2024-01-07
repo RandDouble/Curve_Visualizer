@@ -22,9 +22,9 @@ OHM = r"$\Omega$"
 SCALE = "log"
 FACTOR = {0: "", 3: "k", 6: "M", -3: "m", -6: r"$\mu$", -9: "n"}
 
-# Iv Curve Offsets, do not touch
-X_OFFSET = 1
-Y_OFFSET = 15
+# # Iv Curve Offsets, do not touch
+# X_OFFSET = 1
+# Y_OFFSET = 15
 
 
 class Plotter:
@@ -59,6 +59,33 @@ class Plotter:
         )
         power = np.floor(data[SCALE].mean())
         scale = power - power % 3
+        return scale
+
+    def initialization_long(self, data: pd.DataFrame) -> int:
+        """
+        This function initializes the DataFrame, this is done via sideeffect,
+        the return value is the magnitude order of the calculated resistance.
+        """
+
+        data[RESISTANCE] = data[VOLTAGE] / data[CURRENT]
+        data[SCALE] = np.log10(
+            np.abs(data[RESISTANCE]) + 1e-18,
+        )
+
+        power = np.floor(data[SCALE].mean())
+        scale = power - power % 3
+
+        previous = None
+        for row in np.nditer(data["rowid"].unique()):
+            print(f"{row=}")
+            print(f'Misura={data.loc[data["rowid"]==row, "misura"].unique()}')
+            if previous == None:
+                previous = row
+                continue
+            # print(f'{data.loc[data["rowid"] == previous, TIME]=}')
+            data.loc[data["rowid"] == row, TIME] += data.loc[data["rowid"] == previous, TIME].max()
+            previous=row
+
         return scale
 
     def scale(self, df: pd.DataFrame) -> int:
@@ -108,6 +135,7 @@ class Plotter:
 
         axs.set_xlabel("Voltage [V]")
         axs.set_ylabel(f"Current [{FACTOR[scale]}A]")
+        axs.tick_params(axis="y", color="k")  # Resetting color to black
         axs.set_title("IV Curve")
 
         # The problem with using LineCollection is that you need to manually select limits
@@ -140,7 +168,7 @@ class Plotter:
         voltage = pulses.get_voltage()
 
         # Do computation, it is needed for some mod later
-        time_offset: float = pulses.get_time_offset()
+        time_offset: np.float64 = pulses.get_time_offset()
 
         ############
         # PLOTTING #
@@ -195,7 +223,7 @@ class Plotter:
             color=color,
             label="Data",
             linewidth=1,
-            alpha=.9,
+            alpha=0.9,
         )
 
         ax1.set_xlabel("Time [s]")
@@ -207,8 +235,8 @@ class Plotter:
         # Plot of Voltage
         color = "C1"
         ax2: Axes = ax1.twinx()
-        ax2.set_ylabel("Voltage [V]")
 
+        ax2.set_ylabel("Voltage [V]")
         ax2.tick_params(axis="y", labelcolor=color)
         ax2.yaxis.label.set_color(color)
 
@@ -251,7 +279,7 @@ class Plotter:
                 r"$A_0$" + f" : {popt[1]:.2f}\n"
                 r"$q$" + f" : {popt[2]:.2f}"
             ),
-        ),
+        )
 
         fig.figure.legend(ncols=2)
 
@@ -276,3 +304,39 @@ class Plotter:
 
         fig.figure.add_subplot(ax)
         fig.figure.add_subplot(new_ax)
+
+    def long_plot(self, fig: FigureCanvasQTAgg, ax1: Axes, df: pd.DataFrame):
+        scale = self.initialization_long(df)
+
+        color = "C0"
+
+        ax1.plot(
+            df[TIME],
+            df[RESISTANCE] / 10 ** scale,
+            label="resistance",
+            color=color,
+            linewidth=1,
+            alpha=0.9,
+        )
+
+        ax1.set_xlabel("Time [s]")
+        ax1.set_ylabel(f"Resistance [{FACTOR[scale]}{OHM}]")
+        ax1.set_title(RESISTANCE + " vs " + TIME)
+        ax1.tick_params(axis="y", labelcolor=color)
+        ax1.yaxis.label.set_color(color)
+
+        color = "C1"
+        ax2 : Axes= ax1.twinx()
+
+        ax2.plot(
+            df[TIME],
+            df[VOLTAGE],
+            label="voltage",
+            color=color,
+            linewidth=1,
+        )
+
+        ax2.set_ylabel("Voltage [V]")
+        ax2.tick_params(axis="y", labelcolor=color)
+        ax2.yaxis.label.set_color(color)
+

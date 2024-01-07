@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
-from matplotlib.backends.backend_qtagg import \
+from matplotlib.backends.backend_qt import \
     NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from PySide6 import QtWidgets
@@ -13,9 +13,9 @@ from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox,
                                QComboBox, QFileDialog, QHeaderView, QLabel,
                                QLineEdit, QMainWindow, QPushButton, QStyle,
-                               QTableView, QWidget)
+                               QTableView, QWidget, QTabWidget, QLayout)
 
-from .data_keeper import Data
+from .data_keeper import Data, ViewType
 
 
 class AppDatabase(QMainWindow):
@@ -32,6 +32,12 @@ class AppDatabase(QMainWindow):
         # Inserting Database Name
         self.input_db = QLineEdit()
         self.input_db.setPlaceholderText("Enter Database Name")
+
+
+        # Creating tabs for different Visualization
+
+        self.tab_widget = QTabWidget()
+
         # Search in "File Explorer"
         self.open_folder_action: QAction = self.input_db.addAction(
             QApplication.instance()
@@ -46,6 +52,88 @@ class AppDatabase(QMainWindow):
         self.input_db.returnPressed.connect(self.input_submitted)
         self.button_con.clicked.connect(self.input_submitted)
 
+        # Creating Left Input Database Section
+        dblayout = QtWidgets.QHBoxLayout()
+        dblayout.addWidget(self.input_db)
+        dblayout.addWidget(self.button_con)
+
+
+        # Creating Right Visualization Section
+        rlayout = QtWidgets.QVBoxLayout()
+        rlayout.addWidget(self.toolbar)
+        rlayout.addWidget(self.view, stretch=1)
+
+        self.main_widget = QWidget(self)
+
+        # Adding Widget Necessary for Single Measure Visualization
+        SV_widget = self.single_visualization()
+        LV_widget = self.long_visualization()
+
+        self.tab_widget.addTab(SV_widget, "Single Visualization")
+        self.tab_widget.addTab(LV_widget, "Long Visualization")
+
+        # Combining All widget
+        main_layout = QtWidgets.QGridLayout(self.main_widget)
+        main_layout.addLayout(dblayout, 0, 0)
+        main_layout.addWidget(self.tab_widget, 1 , 0, -1, 1)
+        main_layout.addLayout(rlayout, 0, 1, -1, 1 )
+
+        # Setting Central Widget
+        self.setCentralWidget(self.main_widget)
+
+    @Slot()
+    def single_visualization(self) -> QWidget:
+        self.create_database_filter_SV()
+        self.create_check_box()
+        self.table_SV : QTableView = self.create_table()
+        self.table_SV.activated.connect(self.plotting_selection)
+        return self.create_SV_layout()
+
+
+
+    @Slot()
+    def long_visualization(self) -> QWidget:
+        self.create_database_filter_LV()
+        self.plot_long = QPushButton("Long Plot")
+        self.plot_long.clicked.connect(self.long_plot)
+        self.table_LV : QTableView = self.create_table()
+        return self.create_LV_layout()
+
+    @Slot()
+    def create_check_box(self) -> None:
+        # Creating checkbox row
+        self.label_fit_checkbox = QLabel("Fit with Exponential")
+        self.fit_checkbox = QCheckBox()
+        self.label_PSD_checkbox = QLabel("PDS")
+        self.PSD_checkbox = QCheckBox()
+
+        self.fit_checkbox.setChecked(False)
+        self.fit_checkbox.setChecked(False)
+
+        self.fit_checkbox.setEnabled(False)
+        self.PSD_checkbox.setEnabled(False)
+
+    @Slot()
+    def create_table(self) -> QTableView:
+        # Creating Table
+        table = QTableView()
+
+        table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        table.setAlternatingRowColors(True)
+
+        table.horizontalHeader().setStretchLastSection(True)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        table.horizontalHeader().hide()
+
+        # table.activated.connect(self.plotting_selection_)
+
+        return table
+
+
+
+    @Slot()
+    def create_database_filter_SV(self) -> None:
         # Inserting Database Filter
         self.selector_campione = QComboBox()
         self.selector_date = QComboBox()
@@ -63,36 +151,22 @@ class AppDatabase(QMainWindow):
         self.selector_date.activated.connect(self.update_select_tipologia)
         self.selector_type.activated.connect(self.update_table)
 
-        # Creating checkbox row
-        self.label_fit_checkbox = QLabel("Fit with Exponential")
-        self.fit_checkbox = QCheckBox()
-        self.label_PSD_checkbox = QLabel("PDS")
-        self.PSD_checkbox = QCheckBox()
+    @Slot()
+    def create_database_filter_LV(self) -> None:
+        self.selector_campione_LV = QComboBox()
+        self.selector_date_LV = QComboBox()
 
-        self.fit_checkbox.setChecked(False)
-        self.fit_checkbox.setChecked(False)
+        self.selector_campione_LV.setEditable(False)
+        self.selector_date_LV.setEditable(False)
+        
+        self.selector_campione_LV.setPlaceholderText("Campione")
+        self.selector_date_LV.setPlaceholderText("Data")
 
-        self.fit_checkbox.setEnabled(False)
-        self.PSD_checkbox.setEnabled(False)
+        self.selector_campione_LV.activated.connect(self.update_select_datetime_LV)
+        self.selector_date_LV.activated.connect(self.update_table_LV)
 
-        # Creating Table
-        self.table = QTableView()
-
-        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-        self.table.setAlternatingRowColors(True)
-
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.table.horizontalHeader().hide()
-
-        self.table.activated.connect(self.plotting_selection)
-
-        # Creating Left Input Database Section
-        dblayout = QtWidgets.QHBoxLayout()
-        dblayout.addWidget(self.input_db)
-        dblayout.addWidget(self.button_con)
-
+    @Slot()
+    def create_SV_layout(self) -> QWidget:
         # Creating Left Selector Section
         sel_layout = QtWidgets.QHBoxLayout()
         sel_layout.addWidget(self.selector_campione)
@@ -106,26 +180,34 @@ class AppDatabase(QMainWindow):
         check_layout.addWidget(self.label_PSD_checkbox)
         check_layout.addWidget(self.PSD_checkbox)
 
+        SV_widget = QWidget()
         # Combining Left Section
-        llayout = QtWidgets.QVBoxLayout()
-        llayout.addLayout(dblayout)
+        llayout = QtWidgets.QVBoxLayout(SV_widget)
+        # llayout.addLayout(dblayout)
         llayout.addLayout(sel_layout)
         llayout.addLayout(check_layout)
-        llayout.addWidget(self.table)
+        llayout.addWidget(self.table_SV)
 
-        # Creating Right Visualization Section
-        rlayout = QtWidgets.QVBoxLayout()
-        rlayout.addWidget(self.toolbar)
-        rlayout.addWidget(self.view, stretch=1)
+        return SV_widget
 
-        # Combining All widget
-        main_widget = QWidget(self)
-        main_layout = QtWidgets.QHBoxLayout(main_widget)
-        main_layout.addLayout(llayout)
-        main_layout.addLayout(rlayout)
+    @Slot()
+    def create_LV_layout(self) -> QWidget:
+        # Creating Left Selector Section
+        sel_layout = QtWidgets.QHBoxLayout()
+        sel_layout.addWidget(self.selector_campione_LV)
+        sel_layout.addWidget(self.selector_date_LV)
+        sel_layout.addWidget(self.plot_long)
+        LV_widget = QWidget()
+        # Combining Left Section
+        llayout = QtWidgets.QVBoxLayout(LV_widget)
+        # llayout.addLayout(dblayout)
+        llayout.addLayout(sel_layout)
+        llayout.addWidget(self.table_LV)
 
-        # Setting Central Widget
-        self.setCentralWidget(main_widget)
+        return LV_widget
+
+
+
 
     @Slot()
     def input_submitted(self) -> None:
@@ -142,10 +224,10 @@ class AppDatabase(QMainWindow):
 
     @Slot()
     def plotting_selection(self) -> None:
-        index = self.table.selectionModel().selectedRows()[0]
+        index = self.table_SV.selectionModel().selectedRows()[0]
         print(f"{index.row()=}")
         rowid = self.plottable_elementes_df.iloc[index.row()].loc["rowid"]
-        print(f"{self.plottable_elementes_df.iloc[index.row()].loc["rowid"]=}")
+        print(f"{rowid=}")
         self.data.plot.clear_all(self.view, self.axes)
 
         match self.data.tipologia:
@@ -181,16 +263,28 @@ class AppDatabase(QMainWindow):
         self.view.draw()
 
     @Slot()
+    def long_plot(self) -> None:
+        rowids = self.data.list_plottable_elements_df_LV()["rowid"].values
+        df = self.data.get_measures_LV(rowids)
+        self.data.plot.clear_all(self.view, self.axes)
+        self.data.plot.long_plot(self.view, self.axes, df)
+        self.view.draw()
+
+    @Slot()
     def update_select_campione(self):
         self.selector_campione.setEditable(True)
         self.selector_campione.clear()
         self.selector_campione.insertItems(0, [name for name in self.data.get_campioni()])
+        self.selector_campione_LV.setEditable(True)
+        self.selector_campione_LV.clear()
+        self.selector_campione_LV.insertItems(0, [name for name in self.data.get_campioni()])
+
 
     @Slot()
     def update_select_datetime(self):
         # Prima inserire parametro per filtro
         self.data.campione = self.selector_campione.currentText()
-        self.possible_date = self.data.get_datetimes()
+        self.possible_date = self.data.get_datetimes(ViewType.SV)
         # Modifico selettore successivo
         self.selector_date.setEditable(True)
         self.selector_date.clear()
@@ -198,7 +292,23 @@ class AppDatabase(QMainWindow):
             0,
             [
                 pd.to_datetime(name).strftime("%Y-%b-%d")
-                for name in self.data.get_datetimes()
+                for name in self.data.get_datetimes(ViewType.SV)
+            ],
+        )
+
+    @Slot()
+    def update_select_datetime_LV(self) -> None:
+        # Prima inserire parametro per filtro
+        self.data.campione_LV = self.selector_campione_LV.currentText()
+        self.possible_date_LV = self.data.get_datetimes(ViewType.LV)
+        # Modifico selettore successivo
+        self.selector_date_LV.setEditable(True)
+        self.selector_date_LV.clear()
+        self.selector_date_LV.insertItems(
+            0,
+            [
+                pd.to_datetime(name).strftime("%Y-%b-%d")
+                for name in self.data.get_datetimes(ViewType.LV)
             ],
         )
 
@@ -208,7 +318,7 @@ class AppDatabase(QMainWindow):
         self.selector_type.setEditable(True)
         self.selector_type.clear()
         self.data.datetime = self.possible_date[self.selector_date.currentIndex()]
-        self.selector_type.insertItems(0, [name for name in self.data.get_tipologie()])
+        self.selector_type.insertItems(0, [name for name in self.data.get_tipologie(ViewType.SV)])
 
     @Slot()
     def update_table(self) -> None:
@@ -223,11 +333,22 @@ class AppDatabase(QMainWindow):
             self.PSD_checkbox.setEnabled(False)
 
         self.plottable_elementes_df = self.data.list_plottable_elements_df()
-        self.table.horizontalHeader().show()
+        self.table_SV.horizontalHeader().show()
         model = PandasModel(self.plottable_elementes_df)
-        self.table.setModel(model)
-        # self.table.resizeColumnsToContents()
-        self.table.show()
+        self.table_SV.setModel(model)
+        # self.table_SV.resizeColumnsToContents()
+        self.table_SV.show()
+
+    @Slot()
+    def update_table_LV(self) -> None:
+        self.data.datetime_LV = self.possible_date_LV[self.selector_date_LV.currentIndex()]
+        self.plottable_elementes_df = self.data.list_plottable_elements_df_LV()
+        self.table_LV.horizontalHeader().show()
+        model = PandasModel(self.plottable_elementes_df)
+        self.table_LV.setModel(model)
+        # self.table_SV.resizeColumnsToContents()
+        self.table_LV.show()
+
 
     @Slot()
     def on_open_folder(self):

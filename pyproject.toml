@@ -4,7 +4,7 @@ name = "curve_visualizer"
 readme = "README.md"
 keywords = ["conda"]
 dynamic = ["version"]
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 description = "A package to visualize curve contained in a Database, and the program to build database."
 
 authors = [
@@ -55,12 +55,14 @@ write_to = "src/curve_visualizer/_version.py"
 
 [tool.pyright]
 
-exclude = ["**/__pycache__"]
+exclude = ["**/__pycache__", "**/dist", "**/build"]
 
-
-pythonVersion = "3.12"
+pythonVersion = "3.11"
 pythonPlatform = "all"
-
+typeCheckingMode = "basic"
+reportMissingTypeStubs = false
+reportMissingImports = true
+reportGeneralTypeIssues = false
 
 [tool.ruff]
 

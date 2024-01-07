@@ -10,7 +10,7 @@ package:
 source:
 # https://github.com/RandDouble/Curve_Visualizer/releases/download/v0.0.2/curve_visualizer-0.0.2.tar.gz
   url: https://github.com/RandDouble/Curve_Visualizer/releases/download/v{{ version }}/curve_visualizer-{{ version }}.tar.gz
-  sha256:  4811916a9f9ec953afb9be7ce02fb01a4fecdf941fea4bf7dabb84183996a675
+  sha256:   81282b19d0ef8f3e40640ba785b5256a5d3d57c7382c6788293ae80a449e1e92
 
 build:
   number: 3
