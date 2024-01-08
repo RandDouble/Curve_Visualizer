@@ -3,17 +3,28 @@ from pathlib import Path
 
 import pandas as pd
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
-from matplotlib.backends.backend_qt import \
-    NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from PySide6 import QtWidgets
-from PySide6.QtCore import (QAbstractTableModel, QDir, QFile, QModelIndex, Qt,
-                            Slot)
+from PySide6.QtCore import QAbstractTableModel, QDir, QFile, QModelIndex, Qt, Slot
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox,
-                               QComboBox, QFileDialog, QHeaderView, QLabel,
-                               QLineEdit, QMainWindow, QPushButton, QStyle,
-                               QTableView, QWidget, QTabWidget, QLayout)
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QApplication,
+    QCheckBox,
+    QComboBox,
+    QFileDialog,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QPushButton,
+    QStyle,
+    QTableView,
+    QWidget,
+    QTabWidget,
+    QLayout,
+)
 
 from .data_keeper import Data, ViewType
 
@@ -25,14 +36,13 @@ class AppDatabase(QMainWindow):
         self.setWindowTitle("Curve Visualizer")
         self.setWindowState(Qt.WindowState.WindowMaximized)
         # Creating Figure to Plot
-        self.view = FigureCanvasQTAgg(Figure(figsize=(7, 3), layout="constrained"))
+        self.view = FigureCanvasQTAgg(Figure(figsize=(2, 2), layout="constrained"))
         self.toolbar = NavigationToolbar(self.view, self)
         self.axes = self.view.figure.add_subplot()
 
         # Inserting Database Name
         self.input_db = QLineEdit()
         self.input_db.setPlaceholderText("Enter Database Name")
-
 
         # Creating tabs for different Visualization
 
@@ -53,17 +63,16 @@ class AppDatabase(QMainWindow):
         self.button_con.clicked.connect(self.input_submitted)
 
         # Creating Left Input Database Section
+
         dblayout = QtWidgets.QHBoxLayout()
         dblayout.addWidget(self.input_db)
         dblayout.addWidget(self.button_con)
 
-
         # Creating Right Visualization Section
-        rlayout = QtWidgets.QVBoxLayout()
+        graph_widget = QWidget(self)
+        rlayout = QtWidgets.QVBoxLayout(graph_widget)
         rlayout.addWidget(self.toolbar)
         rlayout.addWidget(self.view, stretch=1)
-
-        self.main_widget = QWidget(self)
 
         # Adding Widget Necessary for Single Measure Visualization
         SV_widget = self.single_visualization()
@@ -73,10 +82,12 @@ class AppDatabase(QMainWindow):
         self.tab_widget.addTab(LV_widget, "Long Visualization")
 
         # Combining All widget
+        self.main_widget = QWidget(self)
         main_layout = QtWidgets.QGridLayout(self.main_widget)
         main_layout.addLayout(dblayout, 0, 0)
-        main_layout.addWidget(self.tab_widget, 1 , 0, -1, 1)
-        main_layout.addLayout(rlayout, 0, 1, -1, 1 )
+        main_layout.addWidget(self.tab_widget, 1, 0, 1, 1)
+        # main_layout.addLayout(rlayout, 0, 1, 1, 2 )
+        main_layout.addWidget(graph_widget, 0, 1, -1, -1)
 
         # Setting Central Widget
         self.setCentralWidget(self.main_widget)
@@ -85,18 +96,16 @@ class AppDatabase(QMainWindow):
     def single_visualization(self) -> QWidget:
         self.create_database_filter_SV()
         self.create_check_box()
-        self.table_SV : QTableView = self.create_table()
+        self.table_SV: QTableView = self.create_table()
         self.table_SV.activated.connect(self.plotting_selection)
         return self.create_SV_layout()
-
-
 
     @Slot()
     def long_visualization(self) -> QWidget:
         self.create_database_filter_LV()
         self.plot_long = QPushButton("Long Plot")
         self.plot_long.clicked.connect(self.long_plot)
-        self.table_LV : QTableView = self.create_table()
+        self.table_LV: QTableView = self.create_table()
         return self.create_LV_layout()
 
     @Slot()
@@ -130,8 +139,6 @@ class AppDatabase(QMainWindow):
 
         return table
 
-
-
     @Slot()
     def create_database_filter_SV(self) -> None:
         # Inserting Database Filter
@@ -158,7 +165,7 @@ class AppDatabase(QMainWindow):
 
         self.selector_campione_LV.setEditable(False)
         self.selector_date_LV.setEditable(False)
-        
+
         self.selector_campione_LV.setPlaceholderText("Campione")
         self.selector_date_LV.setPlaceholderText("Data")
 
@@ -205,9 +212,6 @@ class AppDatabase(QMainWindow):
         llayout.addWidget(self.table_LV)
 
         return LV_widget
-
-
-
 
     @Slot()
     def input_submitted(self) -> None:
@@ -274,11 +278,14 @@ class AppDatabase(QMainWindow):
     def update_select_campione(self):
         self.selector_campione.setEditable(True)
         self.selector_campione.clear()
-        self.selector_campione.insertItems(0, [name for name in self.data.get_campioni()])
+        self.selector_campione.insertItems(
+            0, [name for name in self.data.get_campioni()]
+        )
         self.selector_campione_LV.setEditable(True)
         self.selector_campione_LV.clear()
-        self.selector_campione_LV.insertItems(0, [name for name in self.data.get_campioni()])
-
+        self.selector_campione_LV.insertItems(
+            0, [name for name in self.data.get_campioni()]
+        )
 
     @Slot()
     def update_select_datetime(self):
@@ -318,7 +325,9 @@ class AppDatabase(QMainWindow):
         self.selector_type.setEditable(True)
         self.selector_type.clear()
         self.data.datetime = self.possible_date[self.selector_date.currentIndex()]
-        self.selector_type.insertItems(0, [name for name in self.data.get_tipologie(ViewType.SV)])
+        self.selector_type.insertItems(
+            0, [name for name in self.data.get_tipologie(ViewType.SV)]
+        )
 
     @Slot()
     def update_table(self) -> None:
@@ -341,14 +350,15 @@ class AppDatabase(QMainWindow):
 
     @Slot()
     def update_table_LV(self) -> None:
-        self.data.datetime_LV = self.possible_date_LV[self.selector_date_LV.currentIndex()]
+        self.data.datetime_LV = self.possible_date_LV[
+            self.selector_date_LV.currentIndex()
+        ]
         self.plottable_elementes_df = self.data.list_plottable_elements_df_LV()
         self.table_LV.horizontalHeader().show()
         model = PandasModel(self.plottable_elementes_df)
         self.table_LV.setModel(model)
         # self.table_SV.resizeColumnsToContents()
         self.table_LV.show()
-
 
     @Slot()
     def on_open_folder(self):
@@ -370,21 +380,27 @@ class PandasModel(QAbstractTableModel):
         QAbstractTableModel.__init__(self, parent)
         self._dataframe = dataframe
 
-    def rowCount(self, parent=QModelIndex()) -> int:
+    def rowCount(self, parent=None) -> int:
         """Override method from QAbstractTableModel
 
         Return row count of the pandas DataFrame
         """
+        if parent is None:
+            parent = QModelIndex()
+
         if parent == QModelIndex():
             return len(self._dataframe)
 
         return 0
 
-    def columnCount(self, parent=QModelIndex()) -> int:
+    def columnCount(self, parent=None) -> int:
         """Override method from QAbstractTableModel
 
         Return column count of the pandas DataFrame
         """
+
+        if parent is None:
+            parent = QModelIndex()
         if parent == QModelIndex():
             return len(self._dataframe.columns)
         return 0
@@ -418,6 +434,7 @@ class PandasModel(QAbstractTableModel):
 
         return None
 
+
 def main():
     # Check whether there is already a running QApplication (e.g., if running
     # from an IDE).
@@ -435,16 +452,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # Check whether there is already a running QApplication (e.g., if running
-    # from an IDE).
-    qapp = QtWidgets.QApplication.instance()
-    if not qapp:
-        qapp = QtWidgets.QApplication(sys.argv)
-
-    qapp.setStyle("Fusion")
-    app = AppDatabase()
-    # qapp.setStyleSheet(load_stylesheet(qt_api ="pyside6" ,palette = LightPalette))
-    app.show()
-    app.activateWindow()
-    app.raise_()
-    qapp.exec()
+    main()

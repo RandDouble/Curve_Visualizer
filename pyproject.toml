@@ -62,6 +62,7 @@ pythonPlatform = "all"
 typeCheckingMode = "basic"
 reportMissingTypeStubs = false
 reportMissingImports = true
+reportOptionalMemberAccess = false
 reportGeneralTypeIssues = false
 
 [tool.ruff]
