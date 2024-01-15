@@ -20,7 +20,7 @@ class Pulse:
         self.v_period = self.df_pulses["periodoTot"].values
         self.v_pulse = self.df_pulses["activeTime"].values
         self.v_amp = self.df_pulses["voltage"].values
-        self.v_pulse_rep = self.df_pulses["rip"].values
+        self.v_pulse_rep = self.df_pulses["rip"].astype('int64').values
 
     def from_header_to_array(self, n_pulses: int) -> np.ndarray:
         params = np.array(

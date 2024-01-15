@@ -134,7 +134,7 @@ def measure_in_table(
 ) -> list[float]:
     check = []
     first = True  # Boolean to check if first line, to get starting time.
-    for line in read_file:
+    for index, line in enumerate(read_file):
         if len(line) < 4:  # Elimina tutto quello che ha meno di 4 caratteri
             # Skip if it has less than 4 chars.
             continue
@@ -159,6 +159,10 @@ def measure_in_table(
         cur.execute(
             f"INSERT INTO misure (rowid, times, voltage, current) VALUES ({row_id}, {row})"
         )
+
+    if index == 0: # Se ho una solo linea di misure, allora la misura è fallita.
+        check = 0
+        con.rollback() # Annullo la transazione con il database.
     return check
 
 
@@ -259,16 +263,21 @@ def clean_and_upload(
                 check = measure_in_table(
                     con=con, cur=cur, row_id=row_id, read_file=read_file
                 )
+                if check == 0: # Prevenzione contro misure fallite
+                    cur.execute(f"DELETE FROM CAMPIONI WHERE ROWID = {row_id}")
+                    cur.execute(f"DELETE FROM MISURE WHERE ROWID = {row_id}")
+                    print(f"File Corrente Corrotto : {str(run)}")
 
-                TIPOLOGIA = check_type(b_pulse=bImpulso, pulse=pulse, check=check)
+                else:
+                    TIPOLOGIA = check_type(b_pulse=bImpulso, pulse=pulse, check=check)
 
-                cur.execute(
-                    f"UPDATE campioni SET tipologia = '{TIPOLOGIA}' WHERE rowid = {row_id}"
-                )
+                    cur.execute(
+                        f"UPDATE campioni SET tipologia = '{TIPOLOGIA}' WHERE rowid = {row_id}"
+                    )
 
-                cur.execute(
-                    f"UPDATE campioni SET gen_rep = '{GEN_REP}' WHERE rowid = {row_id}"
-                )
+                    cur.execute(
+                        f"UPDATE campioni SET gen_rep = '{GEN_REP}' WHERE rowid = {row_id}"
+                    )
                 con.commit()
 
                 count+=1

@@ -79,6 +79,7 @@ class Data:
             dtype={
                 "campione": "string",
                 "tipologia": "category",
+                "gen_rep" : "int64"
             },
         )
 
