@@ -4,6 +4,8 @@ import scipy.signal as signal
 import scipy.optimize as optimize
 from sklearn.metrics import r2_score
 
+import seaborn as sns
+import matplotlib as mpl
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.collections import LineCollection
@@ -11,6 +13,10 @@ from matplotlib.colors import Normalize
 from matplotlib.gridspec import GridSpec
 
 from .pulse import Pulse
+
+sns.set_theme(style = "whitegrid")
+mpl.rc('svg', fonttype = 'none')
+mpl.rc('font', family='serif', size=12)
 
 TIME = "times"
 VOLTAGE = "voltage"
@@ -20,7 +26,19 @@ FREQUENCY = "Frequency"
 PSD = "PSD"
 OHM = r"$\Omega$"
 SCALE = "log"
-FACTOR = {0: "", 3: "k", 6: "M", -3: "m", -6: r"$\mu$", -9: "n"}
+FACTOR = {
+    12: "T",
+    9: "G",
+    6: "M",
+    3: "k",
+    0: "",
+    -3: "m",
+    -6: r"$\mu$",
+    -9: "n",
+    -12: "p",
+    -15: "f",
+    -18: "a",
+}
 
 # # Iv Curve Offsets, do not touch
 # X_OFFSET = 1
@@ -83,8 +101,10 @@ class Plotter:
                 previous = row
                 continue
             # print(f'{data.loc[data["rowid"] == previous, TIME]=}')
-            data.loc[data["rowid"] == row, TIME] += data.loc[data["rowid"] == previous, TIME].max()
-            previous=row
+            data.loc[data["rowid"] == row, TIME] += data.loc[
+                data["rowid"] == previous, TIME
+            ].max()
+            previous = row
 
         return scale
 
@@ -123,7 +143,7 @@ class Plotter:
         norm = Normalize(df[TIME].min(), df[TIME].max())
 
         # Creation of the smooth line
-        lc = LineCollection(segments=segments, cmap="rainbow", norm=norm)
+        lc = LineCollection(segments=segments, cmap=sns.color_palette('Spectral', as_cmap=True), norm=norm)
 
         # setting normalization, creation of color line
         lc.set_array(df[TIME])
@@ -133,10 +153,12 @@ class Plotter:
         self.cbar = fig.figure.colorbar(line, ax=axs)
         self.cbar.ax.set_ylabel("Time [s]")
 
-        axs.set_xlabel("Voltage [V]")
-        axs.set_ylabel(f"Current [{FACTOR[scale]}A]")
+        axs.axhline(0, color = 'k')
+        axs.axvline(0, color = 'k')
+        axs.set_xlabel("Voltage [V]", labelpad=5)
+        axs.set_ylabel(f"Current [{FACTOR[scale]}A]", labelpad=5)
         axs.tick_params(axis="y", color="k")  # Resetting color to black
-        axs.set_title("IV Curve")
+        axs.set_title("IV Curve", fontdict={"size" : 14}, pad = 10)
 
         # The problem with using LineCollection is that you need to manually select limits
         # for x and y coordinates
@@ -205,6 +227,8 @@ class Plotter:
             alpha=0.3,
             linewidth=1,
         )
+        ax1.grid(visible=True)
+        ax2.grid(visible=False)
 
     def measure(self, fig: FigureCanvasQTAgg, ax1: Axes, df: pd.DataFrame) -> None:
         # Calculating scale for measure unit
@@ -246,6 +270,8 @@ class Plotter:
             color=color,
             # alpha=0.8,
         )
+        ax1.grid(visible=True)
+        ax2.grid(visible=False)
 
     def measure_fit(self, fig: FigureCanvasQTAgg, ax: Axes, df: pd.DataFrame) -> None:
         scale = self.initialization(df)
@@ -312,7 +338,7 @@ class Plotter:
 
         ax1.plot(
             df[TIME],
-            df[RESISTANCE] / 10 ** scale,
+            df[RESISTANCE] / 10**scale,
             label="resistance",
             color=color,
             linewidth=1,
@@ -326,7 +352,7 @@ class Plotter:
         ax1.yaxis.label.set_color(color)
 
         color = "C1"
-        ax2 : Axes= ax1.twinx()
+        ax2: Axes = ax1.twinx()
 
         ax2.plot(
             df[TIME],
@@ -339,4 +365,5 @@ class Plotter:
         ax2.set_ylabel("Voltage [V]")
         ax2.tick_params(axis="y", labelcolor=color)
         ax2.yaxis.label.set_color(color)
-
+        ax1.grid(visible=True)
+        ax2.grid(visible=False)
