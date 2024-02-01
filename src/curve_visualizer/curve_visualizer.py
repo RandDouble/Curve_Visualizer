@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -23,7 +24,7 @@ from PySide6.QtWidgets import (
     QTableView,
     QWidget,
     QTabWidget,
-    QLayout,
+    QDoubleSpinBox,
 )
 
 from .data_keeper import Data, ViewType
@@ -96,6 +97,7 @@ class AppDatabase(QMainWindow):
     def single_visualization(self) -> QWidget:
         self.create_database_filter_SV()
         self.create_check_box()
+        self.create_filters()
         self.table_SV: QTableView = self.create_table()
         self.table_SV.activated.connect(self.plotting_selection)
         return self.create_SV_layout()
@@ -121,6 +123,48 @@ class AppDatabase(QMainWindow):
 
         self.fit_checkbox.setEnabled(False)
         self.PSD_checkbox.setEnabled(False)
+
+    @Slot()
+    def create_filters(self) -> None:
+        self.label_inferior_limit = QLabel("Enable Min :")
+        self.label_superior_limit = QLabel("Enable Max :")
+
+        self.inferior_limit = QDoubleSpinBox()
+        self.superior_limit = QDoubleSpinBox()
+        self.inferior_limit.setRange(-999.0, 999.0)
+        self.superior_limit.setRange(-999.0, 999.0)
+        self.inferior_limit.setDisabled(True)
+        self.superior_limit.setDisabled(True)
+        self.inferior_limit.setPrefix("min:\t")
+        self.superior_limit.setPrefix("max:\t")
+
+        self.check_sup_limit = QCheckBox()
+        self.check_inf_limit = QCheckBox()
+        self.check_sup_limit.setChecked(False)
+        self.check_inf_limit.setChecked(False)
+        self.check_sup_limit.stateChanged.connect(self.enable_max_select)
+        self.check_inf_limit.stateChanged.connect(self.enable_min_select)
+
+        self.button_replot = QPushButton("Plot")
+        self.button_replot.pressed.connect(self.plotting_selection)
+        self.button_replot.setProperty("plotting", False)
+        self.button_replot.setStyleSheet(
+            """
+                                        QPushButton::pressed{
+                                        background-color: #EC7063;
+                                        }
+                                        QPushButton::disabled{
+                                        background-color: #EC7063;
+                                        }"""
+        )
+        # QPushButton[plotting="true"]{
+        # background-color: #EC7063;
+        # border: none;
+        # }
+        # QLineEdit[plotting="false"] {background-color: palette(base);}
+        # QPushButton:disabled{
+        # background-color: #EC7063;
+        # }
 
     @Slot()
     def create_table(self) -> QTableView:
@@ -181,18 +225,38 @@ class AppDatabase(QMainWindow):
         sel_layout.addWidget(self.selector_type)
 
         # Creating Left Checkbox Section
-        check_layout = QtWidgets.QHBoxLayout()
-        check_layout.addWidget(self.label_fit_checkbox)
-        check_layout.addWidget(self.fit_checkbox)
-        check_layout.addWidget(self.label_PSD_checkbox)
-        check_layout.addWidget(self.PSD_checkbox)
+        options = QWidget()
+        check_layout = QtWidgets.QGridLayout(options)
+        check_layout.addWidget(self.label_fit_checkbox, 0, 1)
+        check_layout.addWidget(self.fit_checkbox, 0, 0)
+        check_layout.addWidget(self.label_PSD_checkbox, 1, 1)
+        check_layout.addWidget(self.PSD_checkbox, 1, 0)
 
-        SV_widget = QWidget()
+        check_layout.addWidget(self.label_inferior_limit, 0, 3)
+        check_layout.addWidget(self.check_inf_limit, 0, 4)
+        check_layout.addWidget(self.inferior_limit, 0, 5)
+        check_layout.addWidget(self.label_superior_limit, 1, 3)
+        check_layout.addWidget(self.check_sup_limit, 1, 4)
+        check_layout.addWidget(self.superior_limit, 1, 5)
+        check_layout.setColumnMinimumWidth(5, 200)
+
+        check_layout.addWidget(self.button_replot, 0, 6, 2, 1)
+
+        self.button_replot.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Expanding,
+        )
+        check_layout.setColumnStretch(2, 1)
+
+        # check_layout.setColumnStretch(4, 1)
+
+        SV_widget = QWidget(self)
         # Combining Left Section
         llayout = QtWidgets.QVBoxLayout(SV_widget)
         # llayout.addLayout(dblayout)
         llayout.addLayout(sel_layout)
-        llayout.addLayout(check_layout)
+        llayout.addWidget(options)
+        # llayout.addLayout(check_layout)
         llayout.addWidget(self.table_SV)
 
         return SV_widget
@@ -214,6 +278,14 @@ class AppDatabase(QMainWindow):
         return LV_widget
 
     @Slot()
+    def enable_min_select(self) -> None:
+        self.inferior_limit.setEnabled(True)
+
+    @Slot()
+    def enable_max_select(self) -> None:
+        self.superior_limit.setEnabled(True)
+
+    @Slot()
     def input_submitted(self) -> None:
         if Path(self.input_db.text()).exists():
             self.data = Data(self.input_db.text())
@@ -228,15 +300,35 @@ class AppDatabase(QMainWindow):
 
     @Slot()
     def plotting_selection(self) -> None:
+        self.button_replot.setDisabled(True)
         index = self.table_SV.selectionModel().selectedRows()[0]
         print(f"{index.row()=}")
         rowid = self.plottable_elementes_df.iloc[index.row()].loc["rowid"]
         print(f"{rowid=}")
         self.data.plot.clear_all(self.view, self.axes)
 
+        df_measure, scale = self.data.get_measures(rowid)
+        df_filter_min = df_measure["resistance"] < np.inf
+        df_filter_max = df_measure["resistance"] > -np.inf
+
+        if self.inferior_limit.isEnabled():
+            df_filter_min = (
+                df_measure["resistance"] > self.inferior_limit.value() * 10**scale
+            )
+        else:
+            self.inferior_limit.setValue(self.data.min)
+
+        if self.superior_limit.isEnabled():
+            df_filter_max = (
+                df_measure["resistance"] < self.superior_limit.value() * 10**scale
+            )
+        else:
+            self.superior_limit.setValue(self.data.max)
+
+        df_filter = df_filter_max & df_filter_min
+
         match self.data.tipologia:
             case "IV_CURVE":
-                df_measure = self.data.get_measures(rowid)
                 self.data.plot.IV_Curve(
                     self.view,
                     self.axes,
@@ -244,11 +336,10 @@ class AppDatabase(QMainWindow):
                 )
 
             case "LETTURA":
-                df_measure = self.data.get_measures(rowid)
                 self.data.plot.measure(
                     self.view,
                     self.axes,
-                    df_measure,
+                    df_measure.loc[df_filter, :],
                 )
 
                 if self.fit_checkbox.isChecked():
@@ -258,13 +349,23 @@ class AppDatabase(QMainWindow):
                     self.data.plot.PSD(self.view, self.axes, df_measure)
 
             case "IMPULSO_UNIPOLARE" | "IMPULSO_ALTERNATO":
-                df_measure = self.data.get_measures(rowid)
                 df_impulses, n_rep = self.data.get_impulses(rowid)
                 self.data.plot.impulse(
-                    self.view, self.axes, df_measure, df_impulses, n_rep.item()
+                    self.view,
+                    self.axes,
+                    df_measure[df_filter],
+                    df_impulses,
+                    n_rep.item(),
                 )
 
+        self.toolbar.update()
         self.view.draw()
+        self.button_replot.setEnabled(True)
+        # self.button_replot.setProperty(
+        #     "plotting", not self.button_replot.property("plotting")
+        # )
+        # self.button_replot.style().unpolish(self.button_replot)
+        # self.button_replot.style().polish(self.button_replot)
 
     @Slot()
     def long_plot(self) -> None:
@@ -343,7 +444,7 @@ class AppDatabase(QMainWindow):
 
         self.plottable_elementes_df = self.data.list_plottable_elements_df()
         self.table_SV.horizontalHeader().show()
-        model = PandasModel(self.plottable_elementes_df)
+        model = PandasModel(self.plottable_elementes_df.sort_values(by="misura"))
         self.table_SV.setModel(model)
         # self.table_SV.resizeColumnsToContents()
         self.table_SV.show()

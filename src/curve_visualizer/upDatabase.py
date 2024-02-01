@@ -134,7 +134,8 @@ def measure_in_table(
 ) -> list[float]:
     check = []
     first = True  # Boolean to check if first line, to get starting time.
-    for index, line in enumerate(read_file):
+    start_time : float = 0
+    for line in read_file:
         if len(line) < 4:  # Elimina tutto quello che ha meno di 4 caratteri
             # Skip if it has less than 4 chars.
             continue
@@ -160,7 +161,7 @@ def measure_in_table(
             f"INSERT INTO misure (rowid, times, voltage, current) VALUES ({row_id}, {row})"
         )
 
-    if index == 0: # Se ho una solo linea di misure, allora la misura è fallita.
+    if len(check) < 2: # Se ho una solo linea di misure, allora la misura è fallita.
         check = 0
         con.rollback() # Annullo la transazione con il database.
     return check
@@ -174,7 +175,9 @@ def check_type(b_pulse: bool, pulse: list[float], check: list[float]) -> str:
         else:
             tipologia = "IMPULSO_ALTERNATO"
 
-    elif check[0] == check[1]:
+    elif len(set(check)) == 1:
+        # Controlling if check contains only one unique element
+        # Necessary because new IV Curve contains more than one element.
         tipologia = "LETTURA"
     else:
         tipologia = "IV_CURVE"

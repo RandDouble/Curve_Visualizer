@@ -5,6 +5,7 @@ rename_dist.sh
 # File di prova
 _version.py
 construct.yaml
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

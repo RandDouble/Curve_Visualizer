@@ -6,7 +6,7 @@ import pandas as pd
 
 from enum import Enum
 
-from .plotter import Plotter
+from .plotter import Plotter, SCALE, RESISTANCE
 
 
 class ViewType(Enum):
@@ -26,6 +26,11 @@ class Data:
         self.datetime_LV = ""
         self.tipologia = ""
         self.plot = Plotter()
+        self._plottable_max: float | np.float64 = 0.0
+        self._plottable_min: float | np.float64 = 0.0
+        self.max: float | np.float64 = 0.0
+        self.min: float | np.float64 = 0.0
+        self.scale: int = 0
 
     def __del__(self) -> None:
         self.cur.close()
@@ -71,16 +76,44 @@ class Data:
     def tipologia(self, value):
         self._tipologia = value
 
+    @property
+    def max(self):
+        return self._max
+
+    @max.setter
+    def max(self, value):
+        if value <= self._plottable_max + 1e-12 and value > self._plottable_min - 1e-12:
+            self._max = value
+        else:
+            print("value error, setting on plottable max")
+            self._max = self._plottable_max
+
+    @property
+    def plottable_max(self):
+        return self._plottable_max
+
+    @property
+    def min(self):
+        return self._min
+
+    @min.setter
+    def min(self, value):
+        if value < self._plottable_max + 1e-12 and value >= self._plottable_min - 1e-12:
+            self._min = value
+        else:
+            print("value error, setting on plottable min")
+            self._min = self._plottable_min
+
+    @property
+    def plottable_min(self):
+        return self._plottable_min
+
     def get_camp_df(self) -> None:
         self.camp_df = pd.read_sql(
             "SELECT * FROM campioni",
             con=self.con,
             parse_dates={"date": {"format": "%Y-%m-%d"}},
-            dtype={
-                "campione": "string",
-                "tipologia": "category",
-                "gen_rep" : "int64"
-            },
+            dtype={"campione": "string", "tipologia": "category", "gen_rep": "int64"},
         )
 
     def get_campioni(self) -> np.ndarray:
@@ -95,7 +128,7 @@ class Data:
 
         return self.camp_df.loc[self.camp_df["campione"] == camp, "date"].unique()
 
-    def get_tipologie(self, view_type : ViewType) -> np.ndarray:
+    def get_tipologie(self, view_type: ViewType) -> np.ndarray:
         match view_type:
             case ViewType.SV:
                 camp = self.campione
@@ -105,8 +138,7 @@ class Data:
                 time = self.datetime_LV
 
         return self.camp_df.loc[
-            (self.camp_df["campione"] == camp)
-            & (self.camp_df["date"] == time),
+            (self.camp_df["campione"] == camp) & (self.camp_df["date"] == time),
             "tipologia",
         ].unique()
 
@@ -154,10 +186,24 @@ class Data:
 
     def get_measures(self, rowid: int) -> pd.DataFrame:
         df = pd.read_sql(
-            f"SELECT * FROM misure WHERE rowid is {rowid}",
+            f"SELECT *, voltage / current as {RESISTANCE} FROM misure WHERE rowid is {rowid}",
             con=self.con,
         )
-        return df
+
+        df[SCALE] = np.log10(
+            np.abs(df[RESISTANCE]) + 1e-18,
+        )
+
+        power = np.floor(df[SCALE].mean())
+        scale = power - power % 3
+
+        self._plottable_max = df[RESISTANCE].max() / 10**scale
+        self._plottable_min = df[RESISTANCE].min() / 10**scale
+
+        self.min = self._plottable_min
+        self.max = self._plottable_max
+
+        return df, scale
 
     def get_impulses(self, rowid: int) -> tuple[pd.DataFrame, np.ndarray]:
         df = pd.read_sql(f"SELECT * FROM impulsi WHERE rowid IS {rowid}", con=self.con)
@@ -166,8 +212,8 @@ class Data:
 
     def get_measures_LV(self, rowids: list[int] | np.ndarray) -> pd.DataFrame:
         df = pd.read_sql(
-            f"SELECT * FROM campioni INNER JOIN misure using(rowid) WHERE rowid IN  ({', '.join(str(i) for i in rowids)})",
-            con = self.con,
+            f"SELECT *, misure.voltage / misure.current as resistance FROM campioni INNER JOIN misure using(rowid) WHERE rowid IN  ({', '.join(str(i) for i in rowids)})",
+            con=self.con,
             parse_dates={"date": {"format": "%Y-%m-%d"}},
             dtype={
                 "campione": "string",

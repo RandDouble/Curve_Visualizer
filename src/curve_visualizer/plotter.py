@@ -4,8 +4,8 @@ import scipy.signal as signal
 import scipy.optimize as optimize
 from sklearn.metrics import r2_score
 
-import seaborn as sns
-import matplotlib as mpl
+from seaborn import set_theme, color_palette
+from matplotlib import rc as mpl_rc
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.collections import LineCollection
@@ -14,14 +14,14 @@ from matplotlib.gridspec import GridSpec
 
 from .pulse import Pulse
 
-sns.set_theme(style = "whitegrid")
-mpl.rc('svg', fonttype = 'none')
-mpl.rc('font', family='serif', size=12)
+set_theme(style="whitegrid")
+mpl_rc("svg", fonttype="none")
+mpl_rc("font", family="serif", size=12)
 
 TIME = "times"
 VOLTAGE = "voltage"
 CURRENT = "current"
-RESISTANCE = "Resistance"
+RESISTANCE = "resistance"
 FREQUENCY = "Frequency"
 PSD = "PSD"
 OHM = r"$\Omega$"
@@ -70,11 +70,6 @@ class Plotter:
         This function initializes the DataFrame, this is done via sideeffect,
         the return value is the magnitude order of the calculated resistance.
         """
-
-        data[RESISTANCE] = data[VOLTAGE] / data[CURRENT]
-        data[SCALE] = np.log10(
-            np.abs(data[RESISTANCE]) + 1e-18,
-        )
         power = np.floor(data[SCALE].mean())
         scale = power - power % 3
         return scale
@@ -85,7 +80,6 @@ class Plotter:
         the return value is the magnitude order of the calculated resistance.
         """
 
-        data[RESISTANCE] = data[VOLTAGE] / data[CURRENT]
         data[SCALE] = np.log10(
             np.abs(data[RESISTANCE]) + 1e-18,
         )
@@ -143,7 +137,9 @@ class Plotter:
         norm = Normalize(df[TIME].min(), df[TIME].max())
 
         # Creation of the smooth line
-        lc = LineCollection(segments=segments, cmap=sns.color_palette('Spectral', as_cmap=True), norm=norm)
+        lc = LineCollection(
+            segments=segments, cmap=color_palette("Spectral", as_cmap=True), norm=norm
+        )
 
         # setting normalization, creation of color line
         lc.set_array(df[TIME])
@@ -153,12 +149,12 @@ class Plotter:
         self.cbar = fig.figure.colorbar(line, ax=axs)
         self.cbar.ax.set_ylabel("Time [s]")
 
-        axs.axhline(0, color = 'k')
-        axs.axvline(0, color = 'k')
+        axs.axhline(0, color="k")
+        axs.axvline(0, color="k")
         axs.set_xlabel("Voltage [V]", labelpad=5)
         axs.set_ylabel(f"Current [{FACTOR[scale]}A]", labelpad=5)
         axs.tick_params(axis="y", color="k")  # Resetting color to black
-        axs.set_title("IV Curve", fontdict={"size" : 14}, pad = 10)
+        axs.set_title("IV Curve", fontdict={"size": 14}, pad=10)
 
         # The problem with using LineCollection is that you need to manually select limits
         # for x and y coordinates
@@ -212,6 +208,7 @@ class Plotter:
         ax1.set_title(RESISTANCE + " vs " + TIME)
         ax1.tick_params(axis="y", labelcolor=color)
         ax1.yaxis.label.set_color(color)
+        # ax1.grid(visible=True)
 
         color = "C1"
         ax2: Axes = ax1.twinx()
@@ -227,10 +224,13 @@ class Plotter:
             alpha=0.3,
             linewidth=1,
         )
-        ax1.grid(visible=True)
         ax2.grid(visible=False)
 
     def measure(self, fig: FigureCanvasQTAgg, ax1: Axes, df: pd.DataFrame) -> None:
+        """
+        Methods to plot Reading measures, defined as current read whilst a constant voltage is applied.
+        In this case resistance is defined as Ohm's Law.a
+        """
         # Calculating scale for measure unit
         scale: int = self.initialization(df)
 
@@ -247,6 +247,8 @@ class Plotter:
             color=color,
             label="Data",
             linewidth=1,
+            marker= '.',
+            linestyle = "dotted",
             alpha=0.9,
         )
 
@@ -270,7 +272,7 @@ class Plotter:
             color=color,
             # alpha=0.8,
         )
-        ax1.grid(visible=True)
+        # ax1.grid(visible=True)
         ax2.grid(visible=False)
 
     def measure_fit(self, fig: FigureCanvasQTAgg, ax: Axes, df: pd.DataFrame) -> None:
@@ -320,7 +322,6 @@ class Plotter:
         new_ax.set_xlabel("Frequency [Hz]")
         new_ax.set_ylabel("PSD")
         new_ax.set_yscale("log")
-        # new_ax.grid(visible=True, which="both")
         # new_ax.set_title("PSD of Resistance")
 
         gs = GridSpec(2, 1)
@@ -365,5 +366,5 @@ class Plotter:
         ax2.set_ylabel("Voltage [V]")
         ax2.tick_params(axis="y", labelcolor=color)
         ax2.yaxis.label.set_color(color)
-        ax1.grid(visible=True)
+        # ax1.grid(visible=True)
         ax2.grid(visible=False)
