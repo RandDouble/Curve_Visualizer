@@ -35,9 +35,10 @@ class AppDatabase(QMainWindow):
         super().__init__(parent)
 
         self.setWindowTitle("Curve Visualizer")
+        self.setMinimumSize(1080, 720)
         self.setWindowState(Qt.WindowState.WindowMaximized)
         # Creating Figure to Plot
-        self.view = FigureCanvasQTAgg(Figure(figsize=(2, 2), layout="constrained"))
+        self.view = FigureCanvasQTAgg(Figure(figsize=(3, 2), layout="constrained"))
         self.toolbar = NavigationToolbar(self.view, self)
         self.axes = self.view.figure.add_subplot()
 
@@ -74,6 +75,10 @@ class AppDatabase(QMainWindow):
         rlayout = QtWidgets.QVBoxLayout(graph_widget)
         rlayout.addWidget(self.toolbar)
         rlayout.addWidget(self.view, stretch=1)
+        # graph_widget.setSizePolicy(
+        #     QtWidgets.QSizePolicy.Policy.Expanding,
+        #     QtWidgets.QSizePolicy.Policy.Expanding,
+        # )
 
         # Adding Widget Necessary for Single Measure Visualization
         SV_widget = self.single_visualization()
@@ -83,12 +88,14 @@ class AppDatabase(QMainWindow):
         self.tab_widget.addTab(LV_widget, "Long Visualization")
 
         # Combining All widget
-        self.main_widget = QWidget(self)
+        self.main_widget = QWidget()
         main_layout = QtWidgets.QGridLayout(self.main_widget)
+        main_layout.addWidget(graph_widget, 0, 1, -1, -1)
         main_layout.addLayout(dblayout, 0, 0)
         main_layout.addWidget(self.tab_widget, 1, 0, 1, 1)
-        # main_layout.addLayout(rlayout, 0, 1, 1, 2 )
-        main_layout.addWidget(graph_widget, 0, 1, -1, -1)
+        main_layout.setColumnStretch(0, 4)
+        main_layout.setColumnStretch(1, 5)
+        main_layout.setColumnMinimumWidth(1, 400)
 
         # Setting Central Widget
         self.setCentralWidget(self.main_widget)
@@ -157,14 +164,6 @@ class AppDatabase(QMainWindow):
                                         background-color: #EC7063;
                                         }"""
         )
-        # QPushButton[plotting="true"]{
-        # background-color: #EC7063;
-        # border: none;
-        # }
-        # QLineEdit[plotting="false"] {background-color: palette(base);}
-        # QPushButton:disabled{
-        # background-color: #EC7063;
-        # }
 
     @Slot()
     def create_table(self) -> QTableView:
@@ -220,9 +219,9 @@ class AppDatabase(QMainWindow):
     def create_SV_layout(self) -> QWidget:
         # Creating Left Selector Section
         sel_layout = QtWidgets.QHBoxLayout()
-        sel_layout.addWidget(self.selector_campione)
-        sel_layout.addWidget(self.selector_date)
-        sel_layout.addWidget(self.selector_type)
+        sel_layout.addWidget(self.selector_campione, stretch=2)
+        sel_layout.addWidget(self.selector_date, stretch=1)
+        sel_layout.addWidget(self.selector_type, stretch=1)
 
         # Creating Left Checkbox Section
         options = QWidget()
@@ -279,11 +278,11 @@ class AppDatabase(QMainWindow):
 
     @Slot()
     def enable_min_select(self) -> None:
-        self.inferior_limit.setEnabled(True)
+        self.inferior_limit.setEnabled(not self.inferior_limit.isEnabled())
 
     @Slot()
     def enable_max_select(self) -> None:
-        self.superior_limit.setEnabled(True)
+        self.superior_limit.setEnabled(not self.superior_limit.isEnabled())
 
     @Slot()
     def input_submitted(self) -> None:
