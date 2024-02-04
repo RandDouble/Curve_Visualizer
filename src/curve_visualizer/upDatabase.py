@@ -70,7 +70,9 @@ def create_db(db_name: Path) -> sqlite3.Connection:
                 voltage float,
                 dutyCicle float,
                 read int,
-                rip int
+                rip int,
+                FOREIGN KEY ( rowid )
+                REFERENCES campioni (rowid) ON DELETE CASCADE
             )
     """
     )
@@ -82,7 +84,9 @@ def create_db(db_name: Path) -> sqlite3.Connection:
                 rowid integer,
                 times float,
                 voltage float,
-                current float
+                current float,
+                FOREIGN KEY ( rowid )
+                REFERENCES campioni (rowid) ON DELETE CASCADE
             )
     """
     )

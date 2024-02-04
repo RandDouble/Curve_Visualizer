@@ -178,8 +178,6 @@ class AppDatabase(QMainWindow):
         table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         table.horizontalHeader().hide()
 
-        # table.activated.connect(self.plotting_selection_)
-
         return table
 
     @Slot()
@@ -443,7 +441,7 @@ class AppDatabase(QMainWindow):
 
         self.plottable_elementes_df = self.data.list_plottable_elements_df()
         self.table_SV.horizontalHeader().show()
-        model = PandasModel(self.plottable_elementes_df.sort_values(by="misura"))
+        model = PandasModel(self.plottable_elementes_df)
         self.table_SV.setModel(model)
         # self.table_SV.resizeColumnsToContents()
         self.table_SV.show()

@@ -169,7 +169,7 @@ class Data:
             & (self.camp_df["tipologia"] == self.tipologia),
             ["rowid", "date", "misura", "tipologia"],
         ]
-
+        plottable.sort_values(by="misura", inplace=True)
         return plottable
 
     def list_plottable_elements_df_LV(self) -> pd.DataFrame:
