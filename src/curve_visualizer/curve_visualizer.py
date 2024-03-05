@@ -3,9 +3,6 @@ from pathlib import Path
 
 import pandas as pd
 import numpy as np
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
-from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.figure import Figure
 from PySide6 import QtWidgets
 from PySide6.QtCore import QAbstractTableModel, QDir, QFile, QModelIndex, Qt, Slot
 from PySide6.QtGui import QAction
@@ -26,6 +23,9 @@ from PySide6.QtWidgets import (
     QTabWidget,
     QDoubleSpinBox,
 )
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
 
 from .data_keeper import Data, ViewType
 
@@ -38,7 +38,7 @@ class AppDatabase(QMainWindow):
         self.setMinimumSize(1080, 720)
         self.setWindowState(Qt.WindowState.WindowMaximized)
         # Creating Figure to Plot
-        self.view = FigureCanvasQTAgg(Figure(figsize=(3, 2), layout="constrained"))
+        self.view = FigureCanvasQTAgg(Figure(figsize=(3, 2), layout="constrained"), dpi=100)
         self.toolbar = NavigationToolbar(self.view, self)
         self.axes = self.view.figure.add_subplot()
 
@@ -124,12 +124,16 @@ class AppDatabase(QMainWindow):
         self.fit_checkbox = QCheckBox()
         self.label_PSD_checkbox = QLabel("PDS")
         self.PSD_checkbox = QCheckBox()
-
+        self.label_gamma_checkbox = QLabel("Gamma Curve")
+        self.gamma_checkbox = QCheckBox()
+        
         self.fit_checkbox.setChecked(False)
-        self.fit_checkbox.setChecked(False)
+        self.PSD_checkbox.setChecked(False)
+        self.gamma_checkbox.setChecked(False)
 
         self.fit_checkbox.setEnabled(False)
         self.PSD_checkbox.setEnabled(False)
+        self.gamma_checkbox.setEnabled(False)
 
     @Slot()
     def create_filters(self) -> None:
@@ -228,23 +232,25 @@ class AppDatabase(QMainWindow):
         check_layout.addWidget(self.fit_checkbox, 0, 0)
         check_layout.addWidget(self.label_PSD_checkbox, 1, 1)
         check_layout.addWidget(self.PSD_checkbox, 1, 0)
+        check_layout.addWidget(self.label_gamma_checkbox, 0, 3 )
+        check_layout.addWidget(self.gamma_checkbox, 0, 2)
 
-        check_layout.addWidget(self.label_inferior_limit, 0, 3)
-        check_layout.addWidget(self.check_inf_limit, 0, 4)
-        check_layout.addWidget(self.inferior_limit, 0, 5)
-        check_layout.addWidget(self.label_superior_limit, 1, 3)
-        check_layout.addWidget(self.check_sup_limit, 1, 4)
-        check_layout.addWidget(self.superior_limit, 1, 5)
-        check_layout.setColumnMinimumWidth(5, 200)
+        check_layout.addWidget(self.label_inferior_limit, 0, 4)
+        check_layout.addWidget(self.check_inf_limit, 0, 5)
+        check_layout.addWidget(self.inferior_limit, 0, 6)
+        check_layout.addWidget(self.label_superior_limit, 1, 4)
+        check_layout.addWidget(self.check_sup_limit, 1, 5)
+        check_layout.addWidget(self.superior_limit, 1, 6)
+        check_layout.setColumnMinimumWidth(6, 200)
 
-        check_layout.addWidget(self.button_replot, 0, 6, 2, 1)
+        check_layout.addWidget(self.button_replot, 0, 7, 2, 1)
 
         self.button_replot.setSizePolicy(
             QtWidgets.QSizePolicy.Policy.Expanding,
             QtWidgets.QSizePolicy.Policy.Expanding,
         )
-        check_layout.setColumnStretch(2, 1)
-
+        check_layout.setColumnStretch(3, 1)
+        check_layout.setColumnStretch(1, 1)
         # check_layout.setColumnStretch(4, 1)
 
         SV_widget = QWidget(self)
@@ -332,6 +338,9 @@ class AppDatabase(QMainWindow):
                     df_measure,
                 )
 
+                if self.gamma_checkbox.isChecked():
+                    self.data.plot.gamma_curve(self.view, self.axes, df_measure)
+
             case "LETTURA":
                 self.data.plot.measure(
                     self.view,
@@ -356,8 +365,9 @@ class AppDatabase(QMainWindow):
                 )
 
         self.toolbar.update()
-        self.view.draw()
+        self.view.draw_idle()
         self.button_replot.setEnabled(True)
+        self.view.flush_events()
         # self.button_replot.setProperty(
         #     "plotting", not self.button_replot.property("plotting")
         # )
@@ -435,9 +445,15 @@ class AppDatabase(QMainWindow):
         if self.data.tipologia == "LETTURA":
             self.fit_checkbox.setEnabled(True)
             self.PSD_checkbox.setEnabled(True)
+            self.gamma_checkbox.setEnabled(False)
+        elif self.data.tipologia == 'IV_CURVE':
+            self.fit_checkbox.setEnabled(False)
+            self.PSD_checkbox.setEnabled(False)
+            self.gamma_checkbox.setEnabled(True)
         else:
             self.fit_checkbox.setEnabled(False)
             self.PSD_checkbox.setEnabled(False)
+            self.gamma_checkbox.setEnabled(False)
 
         self.plottable_elementes_df = self.data.list_plottable_elements_df()
         self.table_SV.horizontalHeader().show()

@@ -58,12 +58,13 @@ write_to = "src/curve_visualizer/_version.py"
 exclude = ["**/__pycache__", "**/dist", "**/build"]
 
 pythonVersion = "3.11"
-pythonPlatform = "all"
-typeCheckingMode = "basic"
+pythonPlatform = "All"
+typeCheckingMode = "off"
 reportMissingTypeStubs = false
 reportMissingImports = true
 reportOptionalMemberAccess = false
 reportGeneralTypeIssues = false
+reportCallIssue = false
 
 [tool.ruff]
 

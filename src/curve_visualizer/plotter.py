@@ -12,11 +12,17 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import Normalize
 from matplotlib.gridspec import GridSpec
 
+# from matplotlib.pyplot import set_loglevel
+
 from .pulse import Pulse
+
 
 set_theme(style="whitegrid")
 mpl_rc("svg", fonttype="none")
-mpl_rc("font", family="serif", size=12)
+mpl_rc("font", family="serif", size=20)
+mpl_rc("axes", titlesize=32, labelsize=28)
+mpl_rc("ytick", labelsize=20)
+mpl_rc("xtick", labelsize=20)
 
 TIME = "times"
 VOLTAGE = "voltage"
@@ -39,10 +45,6 @@ FACTOR = {
     -15: "f",
     -18: "a",
 }
-
-# # Iv Curve Offsets, do not touch
-# X_OFFSET = 1
-# Y_OFFSET = 15
 
 
 class Plotter:
@@ -154,7 +156,7 @@ class Plotter:
         axs.set_xlabel("Voltage [V]", labelpad=5)
         axs.set_ylabel(f"Current [{FACTOR[scale]}A]", labelpad=5)
         axs.tick_params(axis="y", color="k")  # Resetting color to black
-        axs.set_title("IV Curve", fontdict={"size": 14}, pad=10)
+        # axs.set_title("IV Curve", fontdict={"size": 22}, pad=10)
 
         # The problem with using LineCollection is that you need to manually select limits
         # for x and y coordinates
@@ -205,7 +207,7 @@ class Plotter:
         )
         ax1.set_xlabel("Time [s]")
         ax1.set_ylabel(f"Resistance [{FACTOR[scale]}{OHM}]")
-        ax1.set_title(RESISTANCE + " vs " + TIME)
+        # ax1.set_title(RESISTANCE + " vs " + TIME)
         ax1.tick_params(axis="y", labelcolor=color)
         ax1.yaxis.label.set_color(color)
         # ax1.grid(visible=True)
@@ -247,14 +249,14 @@ class Plotter:
             color=color,
             label="Data",
             linewidth=1,
-            marker= '.',
-            linestyle = "dotted",
+            marker=".",
+            linestyle="dotted",
             alpha=0.9,
         )
 
         ax1.set_xlabel("Time [s]")
         ax1.set_ylabel(f"Resistance [{FACTOR[scale]}{OHM}]")
-        ax1.set_title(RESISTANCE + " vs " + TIME)
+        # ax1.set_title(RESISTANCE + " vs " + TIME)
         ax1.tick_params(axis="y", labelcolor=color)
         ax1.yaxis.label.set_color(color)
 
@@ -348,7 +350,7 @@ class Plotter:
 
         ax1.set_xlabel("Time [s]")
         ax1.set_ylabel(f"Resistance [{FACTOR[scale]}{OHM}]")
-        ax1.set_title(RESISTANCE + " vs " + TIME)
+        # ax1.set_title(RESISTANCE + " vs " + TIME)
         ax1.tick_params(axis="y", labelcolor=color)
         ax1.yaxis.label.set_color(color)
 
@@ -368,3 +370,94 @@ class Plotter:
         ax2.yaxis.label.set_color(color)
         # ax1.grid(visible=True)
         ax2.grid(visible=False)
+
+    def gamma_curve(self, fig: FigureCanvasQTAgg, ax1: Axes, df: pd.DataFrame) -> None:
+        """Reimplemented from F. Profumo matlab code and from A. Acha paper. Calculates Gamma Curve from IV Graph"""
+
+        gs = GridSpec(3, 2, figure=fig.figure, width_ratios=(90, 8), height_ratios=(40, 30, 30))
+
+        ax1.set_subplotspec(gs[0, 0])
+
+        first_quadrant = fig.figure.add_subplot(gs[1, 0])
+        third_quadrant = fig.figure.add_subplot(gs[2, 0], sharex=first_quadrant)
+        fig.figure.add_subplot(ax1)
+
+        get_changing_voltage: np.ndarray = (
+            np.nonzero(np.diff(df[VOLTAGE].values))[0] + 1
+        )  # Find all indeces where voltage changes
+
+        actual_changing_voltage: np.ndarray = np.zeros(get_changing_voltage.size + 1)
+        # get changing voltages has one elemet less
+        # because it doesn't contain the first voltage assumed.
+        actual_changing_voltage[1:] = get_changing_voltage  # Transferring Info
+
+        voltage_mean_value: np.ndarray = df.loc[
+            actual_changing_voltage, VOLTAGE
+        ].values  # get_changing_voltages has one elements less,
+        current_mean: np.ndarray = np.zeros(
+            voltage_mean_value.size
+        )  # Allocating vector for current means
+        equals_elements: np.ndarray = np.diff(actual_changing_voltage)
+
+        for index, element in enumerate(actual_changing_voltage):
+            if index != actual_changing_voltage.size - 1:
+                end_pos = equals_elements[index] + element
+                current_mean[index] = np.mean(df.loc[element:end_pos, CURRENT].values)
+
+        log_v = np.log(np.abs(voltage_mean_value))
+        log_i = np.log(np.abs(current_mean))
+        gamma = np.gradient(log_i, log_v)
+        gradient = np.gradient(voltage_mean_value) # To be used as filter, reduces amount of computing needed
+        sqrt_v = np.sqrt(np.abs(voltage_mean_value))
+
+        color = "C0"  # First quadrant, voltage increasing
+        first_quadrant.plot(
+            sqrt_v[(voltage_mean_value >= 0) & (gradient > 0)],
+            gamma[(voltage_mean_value >= 0) & (gradient > 0)],
+            color=color,
+            label="I quadrant\nV decreasing",
+            linestyle="",
+            marker=".",
+        )
+
+        color = "C1"  # First quadrant, voltage decreasing
+        first_quadrant.plot(
+            sqrt_v[(voltage_mean_value >= 0) & (gradient < 0)],
+            gamma[(voltage_mean_value >= 0) & (gradient < 0)],
+            color=color,
+            label="I quadrant\nV decreasing",
+            linestyle="",
+            marker=".",
+        )
+
+        color = "C2"  # Third quadrant, voltage increasing
+        third_quadrant.plot(
+            sqrt_v[(voltage_mean_value < 0) & (gradient > 0)],
+            gamma[(voltage_mean_value < 0) & (gradient > 0)],
+            color=color,
+            label="III quadrant\nV increasing",
+            linestyle="",
+            marker=".",
+        )
+
+        color = "C3"  # Third quadrant, voltage decreasing
+        third_quadrant.plot(
+            sqrt_v[(voltage_mean_value < 0) & (gradient < 0)],
+            gamma[(voltage_mean_value < 0) & (gradient < 0)],
+            color=color,
+            label="III quadrant\nV decreasing",
+            linestyle="",
+            marker=".",
+        )
+
+
+        third_quadrant.set_xlabel(r"$\sqrt{V}$ [$V^{1/2}$]")
+        third_quadrant.set_ylabel(r"$\gamma$")
+        first_quadrant.set_ylabel(r"$\gamma$")
+        first_quadrant.tick_params('x', labelbottom = 0)
+        fig.figure.legend(
+            loc="center right",
+            # bbox_to_anchor=(1.01, 0.3, 0.25, 0.45),
+            # bbox_transform=first_quadrant.transAxes,
+            # borderaxespad=0.0,
+        )

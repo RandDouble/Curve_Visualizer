@@ -91,6 +91,21 @@ def create_db(db_name: Path) -> sqlite3.Connection:
     """
     )
 
+    cur.execute(
+        """
+        CREATE INDEX idx_impulsi_rowid ON impulsi (
+            rowid ASC
+        );
+    """
+    )
+
+    cur.execute(
+        """
+        CREATE INDEX idx_misure_rowid ON misure (
+            rowid ASC
+        );
+    """
+    )
     con.commit()
 
     return con

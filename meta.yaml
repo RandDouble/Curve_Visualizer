@@ -1,6 +1,6 @@
 # {% set pyproject = load_file_data('pyproject.toml') %}
 {% set name = "curve_visualizer" %}
-{% set version = "0.2.0" %}
+{% set version = "0.2.1" %}
 
 
 package:
@@ -10,7 +10,7 @@ package:
 source:
 # https://github.com/RandDouble/Curve_Visualizer/releases/download/v0.0.2/curve_visualizer-0.0.2.tar.gz
   url: https://github.com/RandDouble/Curve_Visualizer/releases/download/v{{ version }}/curve_visualizer-{{ version }}.tar.gz
-  sha256:  4d43a9be1f2e9b5e177931dab5b45d3a732750ab89f5a0cca57f0d3f5f746a9e 
+  sha256:  68de705bad5aece4d6a8d4e07aa9b248aca75bbaf3763ee848d1ab0a6085bf62
 
 build:
   number: 3
