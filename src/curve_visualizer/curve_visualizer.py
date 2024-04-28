@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 from PySide6 import QtWidgets
-from PySide6.QtCore import QAbstractTableModel, QDir, QFile, QModelIndex, Qt, Slot
+from PySide6.QtCore import QDir, Qt, Slot
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -28,6 +28,7 @@ from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToo
 from matplotlib.figure import Figure
 
 from .data_keeper import Data, ViewType
+from .pandas_model import PandasModel
 
 
 class AppDatabase(QMainWindow):
@@ -38,7 +39,9 @@ class AppDatabase(QMainWindow):
         self.setMinimumSize(1080, 720)
         self.setWindowState(Qt.WindowState.WindowMaximized)
         # Creating Figure to Plot
-        self.view = FigureCanvasQTAgg(Figure(figsize=(3, 2), layout="constrained"), dpi=100)
+        self.view = FigureCanvasQTAgg(
+            Figure(figsize=(3, 2), layout="constrained"), dpi=100
+        )
         self.toolbar = NavigationToolbar(self.view, self)
         self.axes = self.view.figure.add_subplot()
 
@@ -126,7 +129,7 @@ class AppDatabase(QMainWindow):
         self.PSD_checkbox = QCheckBox()
         self.label_gamma_checkbox = QLabel("Gamma Curve")
         self.gamma_checkbox = QCheckBox()
-        
+
         self.fit_checkbox.setChecked(False)
         self.PSD_checkbox.setChecked(False)
         self.gamma_checkbox.setChecked(False)
@@ -232,7 +235,7 @@ class AppDatabase(QMainWindow):
         check_layout.addWidget(self.fit_checkbox, 0, 0)
         check_layout.addWidget(self.label_PSD_checkbox, 1, 1)
         check_layout.addWidget(self.PSD_checkbox, 1, 0)
-        check_layout.addWidget(self.label_gamma_checkbox, 0, 3 )
+        check_layout.addWidget(self.label_gamma_checkbox, 0, 3)
         check_layout.addWidget(self.gamma_checkbox, 0, 2)
 
         check_layout.addWidget(self.label_inferior_limit, 0, 4)
@@ -368,11 +371,6 @@ class AppDatabase(QMainWindow):
         self.view.draw_idle()
         self.button_replot.setEnabled(True)
         self.view.flush_events()
-        # self.button_replot.setProperty(
-        #     "plotting", not self.button_replot.property("plotting")
-        # )
-        # self.button_replot.style().unpolish(self.button_replot)
-        # self.button_replot.style().polish(self.button_replot)
 
     @Slot()
     def long_plot(self) -> None:
@@ -386,9 +384,7 @@ class AppDatabase(QMainWindow):
     def update_select_campione(self):
         self.selector_campione.setEditable(True)
         self.selector_campione.clear()
-        self.selector_campione.insertItems(
-            0, [name for name in self.data.get_campioni()]
-        )
+        self.selector_campione.insertItems(0, [name for name in self.data.get_campioni()])
         self.selector_campione_LV.setEditable(True)
         self.selector_campione_LV.clear()
         self.selector_campione_LV.insertItems(
@@ -446,7 +442,7 @@ class AppDatabase(QMainWindow):
             self.fit_checkbox.setEnabled(True)
             self.PSD_checkbox.setEnabled(True)
             self.gamma_checkbox.setEnabled(False)
-        elif self.data.tipologia == 'IV_CURVE':
+        elif self.data.tipologia == "IV_CURVE":
             self.fit_checkbox.setEnabled(False)
             self.PSD_checkbox.setEnabled(False)
             self.gamma_checkbox.setEnabled(True)
@@ -485,68 +481,6 @@ class AppDatabase(QMainWindow):
 
         if Path(file_path).is_file():
             self.input_db.setText(file_path)
-
-
-class PandasModel(QAbstractTableModel):
-    """A model to interface a Qt view with pandas dataframe"""
-
-    def __init__(self, dataframe: pd.DataFrame, parent=None):
-        QAbstractTableModel.__init__(self, parent)
-        self._dataframe = dataframe
-
-    def rowCount(self, parent=None) -> int:
-        """Override method from QAbstractTableModel
-
-        Return row count of the pandas DataFrame
-        """
-        if parent is None:
-            parent = QModelIndex()
-
-        if parent == QModelIndex():
-            return len(self._dataframe)
-
-        return 0
-
-    def columnCount(self, parent=None) -> int:
-        """Override method from QAbstractTableModel
-
-        Return column count of the pandas DataFrame
-        """
-
-        if parent is None:
-            parent = QModelIndex()
-        if parent == QModelIndex():
-            return len(self._dataframe.columns)
-        return 0
-
-    def data(self, index: QModelIndex, role=Qt.ItemDataRole):
-        """Override method from QAbstractTableModel
-
-        Return data cell from the pandas DataFrame
-        """
-        if not index.isValid():
-            return None
-
-        if role == Qt.ItemDataRole.DisplayRole:
-            return str(self._dataframe.iloc[index.row(), index.column()])
-
-        return None
-
-    def headerData(
-        self, section: int, orientation: Qt.Orientation, role: Qt.ItemDataRole
-    ):
-        """Override method from QAbstractTableModel
-
-        Return dataframe index as vertical header data and columns as horizontal header data.
-        """
-        if role == Qt.ItemDataRole.DisplayRole:
-            if orientation == Qt.Orientation.Horizontal:
-                return str(self._dataframe.columns[section])
-
-            if orientation == Qt.Orientation.Vertical:
-                return str(self._dataframe.index[section])
-
-        return None
 
 
 def main():

@@ -1,13 +1,12 @@
-from sqlite3 import Connection
+from sqlite3 import Connection, Cursor
 
 import numpy as np
-import numpy.typing as npt
 import pandas as pd
 
 from enum import Enum
 
-from .plotter import Plotter, SCALE, RESISTANCE
-
+from .plotter import Plotter
+from .local_constants import SCALE, RESISTANCE
 
 class ViewType(Enum):
     SV = 0
@@ -19,7 +18,7 @@ class Data:
 
     def __init__(self, db_name) -> None:
         self.con = Connection(db_name)
-        self.cur = self.con.cursor()
+        self.cur : Cursor = self.con.cursor()
         self.campione = ""
         self.campione_LV = ""
         self.datetime = ""
@@ -173,15 +172,12 @@ class Data:
         return plottable
 
     def list_plottable_elements_df_LV(self) -> pd.DataFrame:
-        # print(f'{self.campione_LV=}')
-        # print(f'{self.datetime_LV=}')
         plottable = self.camp_df.loc[
             (self.camp_df["campione"] == self.campione_LV)
             & (self.camp_df["date"] == self.datetime_LV)
             & (self.camp_df["tipologia"] != "IV_CURVE"),
             ["rowid", "date", "misura", "tipologia"],
         ]
-        # print(plottable.head())
         return plottable
 
     def get_measures(self, rowid: int) -> pd.DataFrame:
